@@ -1,0 +1,2437 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
+    <meta name="theme-color" content="#0d1117">
+    <title>Base64 Converter Pro</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-hover: #30363d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent: #58a6ff;
+            --accent-hover: #79b8ff;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+            --purple: #a371f7;
+            --orange: #f0883e;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #eaeef2;
+            --bg-hover: #d0d7de;
+            --border-color: #d0d7de;
+            --text-primary: #1f2328;
+            --text-secondary: #656d76;
+            --text-muted: #8c959f;
+            --accent: #0969da;
+            --accent-hover: #0550ae;
+            --success: #1a7f37;
+            --warning: #9a6700;
+            --error: #cf222e;
+            --purple: #8250df;
+            --orange: #bc4c00;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 3rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--bg-hover);
+            border-color: var(--text-muted);
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            width: 36px;
+            height: 36px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0;
+        }
+
+        .btn-group .btn {
+            border-radius: 0;
+        }
+
+        .btn-group .btn:first-child {
+            border-radius: 6px 0 0 6px;
+        }
+
+        .btn-group .btn:last-child {
+            border-radius: 0 6px 6px 0;
+        }
+
+        .btn-group .btn:not(:last-child) {
+            border-right: none;
+        }
+
+        .btn-group .btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-secondary);
+            padding: 0.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1000px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.875rem 1rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--bg-primary);
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone:focus-visible,
+        .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(88, 166, 255, 0.05);
+        }
+
+        .drop-zone.drag-over {
+            transform: scale(1.01);
+        }
+
+        .drop-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            color: var(--text-muted);
+        }
+
+        .drop-text {
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .drop-hint {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* URL Input */
+        .url-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* File List */
+        .file-list {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .file-item.processing { border-color: var(--accent); }
+        .file-item.complete { border-color: var(--success); }
+        .file-item.error { border-color: var(--error); }
+
+        .file-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .file-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.1s ease;
+        }
+
+        /* Output Section */
+        .output-section {
+            margin-top: 1rem;
+        }
+
+        .output-textarea {
+            width: 100%;
+            min-height: 150px;
+            max-height: 300px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.875rem;
+            color: var(--text-primary);
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            resize: vertical;
+            word-break: break-all;
+        }
+
+        .output-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .output-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Hash Display */
+        .hash-display {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.75rem;
+        }
+
+        .hash-item {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.375rem;
+        }
+
+        .hash-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .hash-label {
+            color: var(--text-secondary);
+            min-width: 60px;
+        }
+
+        .hash-value {
+            word-break: break-all;
+            cursor: pointer;
+        }
+
+        .hash-value:hover {
+            color: var(--accent);
+        }
+
+        /* Code Snippet */
+        .code-snippet-section {
+            margin-top: 1rem;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .code-tab {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+        }
+
+        .code-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .code-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .code-output {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        /* Text Panel */
+        .text-input {
+            width: 100%;
+            min-height: 200px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.875rem;
+            color: var(--text-primary);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Settings */
+        .settings-group {
+            margin-bottom: 1rem;
+        }
+
+        .settings-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .settings-select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .settings-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .settings-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+        }
+
+        .settings-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .stat-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.625rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* History */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .history-item:hover {
+            border-color: var(--text-muted);
+        }
+
+        .history-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        .history-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-name {
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-meta {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            padding: 1rem;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.visible .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .qr-container canvas {
+            display: block;
+        }
+
+        .qr-warning {
+            font-size: 0.8rem;
+            color: var(--warning);
+            margin-top: 0.75rem;
+        }
+
+        /* Diff Tool */
+        .diff-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .diff-input {
+            width: 100%;
+            min-height: 150px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.8rem;
+            resize: vertical;
+        }
+
+        .diff-result {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .diff-match { color: var(--success); }
+        .diff-mismatch { color: var(--error); }
+
+        /* Image Resize */
+        .resize-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .resize-input {
+            width: 80px;
+            padding: 0.375rem 0.5rem;
+            font-size: 0.8rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 1001;
+        }
+
+        .toast {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            max-width: 320px;
+        }
+
+        .toast.visible { transform: translateX(0); }
+        .toast.success { border-color: var(--success); }
+        .toast.error { border-color: var(--error); }
+        .toast.warning { border-color: var(--warning); }
+
+        /* Preview */
+        .preview-container {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .preview-media {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 6px;
+            background: var(--bg-primary);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Utility */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .badge-success {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--warning);
+        }
+
+        .split-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 700px) {
+            .split-view {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .collapsible-content.open {
+            max-height: 500px;
+        }
+
+        .chevron {
+            transition: transform 0.2s ease;
+        }
+
+        .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 600px) {
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            .tabs {
+                flex-wrap: wrap;
+            }
+            .output-actions, .decode-actions {
+                flex-direction: column;
+            }
+            .output-actions .btn, .decode-actions .btn {
+                width: 100%;
+            }
+            .diff-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">B64</div>
+                <h1>Base64 Converter Pro</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-sm" id="installBtn" style="display: none;" title="Install as app">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button class="btn btn-icon" id="diffToggle" title="Compare Base64 strings">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </button>
+                <button class="btn btn-icon" id="themeToggle" title="Toggle theme">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mode Tabs -->
+        <div class="tabs" role="tablist">
+            <button class="tab active" role="tab" data-tab="encode">File Encode</button>
+            <button class="tab" role="tab" data-tab="text">Text</button>
+            <button class="tab" role="tab" data-tab="decode">Decode</button>
+        </div>
+
+        <div class="main-grid">
+            <main>
+                <!-- ============ FILE ENCODE PANEL ============ -->
+                <div id="encodePanel" class="panel">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Input Files</span>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span class="badge" id="processingBadge" style="display: none;">Processing...</span>
+                                <button class="btn btn-sm" id="clearAllBtn" disabled>Clear All</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="drop-zone" id="dropZone" tabindex="0" role="button">
+                                <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                </svg>
+                                <p class="drop-text">Drop files or folders here</p>
+                                <p class="drop-hint">Paste images with Ctrl+V • Click to browse</p>
+                            </div>
+                            <input type="file" id="fileInput" class="visually-hidden" multiple>
+
+                            <div class="url-input-group">
+                                <input type="url" class="url-input" id="urlInput" placeholder="Or enter URL to fetch...">
+                                <button class="btn btn-sm" id="fetchUrlBtn">Fetch</button>
+                            </div>
+
+                            <div class="file-list" id="fileList"></div>
+                        </div>
+                    </div>
+
+                    <div class="output-section" id="outputSection" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Output</span>
+                                <div style="display: flex; gap: 0.75rem; align-items: center; font-size: 0.75rem; color: var(--text-secondary);">
+                                    <span id="outputStats"></span>
+                                    <span id="outputSpeed"></span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <textarea class="output-textarea" id="outputText" readonly></textarea>
+                                
+                                <div class="output-actions">
+                                    <button class="btn btn-primary" id="copyBtn">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                        Copy
+                                    </button>
+                                    <button class="btn" id="downloadBtn">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                        Download
+                                    </button>
+                                    <button class="btn" id="downloadZipBtn" style="display: none;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+                                        ZIP All
+                                    </button>
+                                    <button class="btn" id="qrBtn">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                                        QR
+                                    </button>
+                                    <button class="btn" id="jsonExportBtn">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        JSON
+                                    </button>
+                                    <button class="btn" id="shareBtn" style="display: none;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                                        Share
+                                    </button>
+                                </div>
+
+                                <!-- Hash Display -->
+                                <div class="hash-display" id="hashDisplay" style="display: none;">
+                                    <div class="hash-item"><span class="hash-label">MD5:</span><span class="hash-value" id="hashMd5" title="Click to copy">-</span></div>
+                                    <div class="hash-item"><span class="hash-label">SHA-1:</span><span class="hash-value" id="hashSha1" title="Click to copy">-</span></div>
+                                    <div class="hash-item"><span class="hash-label">SHA-256:</span><span class="hash-value" id="hashSha256" title="Click to copy">-</span></div>
+                                </div>
+
+                                <!-- Code Snippet Generator -->
+                                <div class="code-snippet-section" id="codeSnippetSection" style="display: none;">
+                                    <div class="collapsible-header" id="codeSnippetToggle">
+                                        <span class="settings-label" style="margin: 0;">Code Snippets</span>
+                                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </div>
+                                    <div class="collapsible-content" id="codeSnippetContent">
+                                        <div class="code-tabs" style="margin-top: 0.75rem;">
+                                            <button class="code-tab active" data-lang="html">HTML</button>
+                                            <button class="code-tab" data-lang="css">CSS</button>
+                                            <button class="code-tab" data-lang="js">JavaScript</button>
+                                            <button class="code-tab" data-lang="python">Python</button>
+                                            <button class="code-tab" data-lang="csharp">C#</button>
+                                            <button class="code-tab" data-lang="json">JSON</button>
+                                        </div>
+                                        <div class="code-output" id="codeOutput"></div>
+                                        <button class="btn btn-sm" style="margin-top: 0.5rem;" id="copyCodeBtn">Copy Code</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TEXT PANEL ============ -->
+                <div id="textPanel" class="panel" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Text to Base64</span>
+                            <div class="btn-group">
+                                <button class="btn btn-sm active" data-mode="encode" id="textEncodeMode">Encode</button>
+                                <button class="btn btn-sm" data-mode="decode" id="textDecodeMode">Decode</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="split-view">
+                                <div>
+                                    <label class="settings-label">Input</label>
+                                    <textarea class="text-input" id="textInput" placeholder="Enter text to encode..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="settings-label">Output</label>
+                                    <textarea class="text-input" id="textOutput" readonly placeholder="Result will appear here..."></textarea>
+                                </div>
+                            </div>
+                            <div class="output-actions" style="margin-top: 1rem;">
+                                <button class="btn btn-primary" id="textConvertBtn">Convert</button>
+                                <button class="btn" id="textCopyBtn">Copy Output</button>
+                                <button class="btn" id="textSwapBtn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                    Swap
+                                </button>
+                                <button class="btn" id="textClearBtn">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ DECODE PANEL ============ -->
+                <div id="decodePanel" class="panel" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Base64 to File</span>
+                            <button class="btn btn-sm" id="pasteBtn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                                Paste
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <textarea class="text-input" id="decodeInput" placeholder="Paste Base64 string here (with or without data URI prefix)..."></textarea>
+                            
+                            <div class="decode-actions" style="margin-top: 1rem;">
+                                <button class="btn btn-primary" id="decodeBtn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                    Decode &amp; Download
+                                </button>
+                                <button class="btn" id="previewDecodeBtn">Preview</button>
+                                <button class="btn" id="clearDecodeBtn">Clear</button>
+                            </div>
+
+                            <div class="preview-container" id="decodePreviewContainer" style="display: none;">
+                                <img class="preview-media" id="decodePreviewImg" style="display: none;">
+                                <video class="preview-media" id="decodePreviewVideo" controls style="display: none;"></video>
+                                <audio class="preview-media" id="decodePreviewAudio" controls style="display: none;"></audio>
+                                <div class="file-meta" id="decodeMetaInfo" style="margin-top: 0.5rem;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- ============ SIDEBAR ============ -->
+            <aside>
+                <!-- Settings -->
+                <div class="card" style="margin-bottom: 1rem;">
+                    <div class="card-header">
+                        <span class="card-title">Settings</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="settings-group">
+                            <label class="settings-label">Encoding Format</label>
+                            <select class="settings-select" id="encodingFormat">
+                                <option value="base64">Base64 (Standard)</option>
+                                <option value="base64url">Base64 URL-Safe</option>
+                                <option value="base32">Base32</option>
+                                <option value="hex">Hexadecimal</option>
+                                <option value="ascii85">ASCII85 (Base85)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="settings-group">
+                            <label class="settings-label">Options</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="includeDataUri">
+                                    <label for="includeDataUri">Include Data URI prefix</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="lineWrap">
+                                    <label for="lineWrap">Line wrap (76 chars / MIME)</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="compressFirst">
+                                    <label for="compressFirst">Compress before encoding</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="showHashes">
+                                    <label for="showHashes">Show file hashes</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="showCodeSnippets" checked>
+                                    <label for="showCodeSnippets">Show code snippets</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="saveToHistory" checked>
+                                    <label for="saveToHistory">Save to history</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <label class="settings-label">Image Resize (before encode)</label>
+                            <div class="resize-controls">
+                                <input type="number" class="resize-input" id="resizeWidth" placeholder="Width" min="1">
+                                <span style="color: var(--text-secondary);">×</span>
+                                <input type="number" class="resize-input" id="resizeHeight" placeholder="Height" min="1">
+                                <div class="checkbox-item" style="margin-left: 0.5rem;">
+                                    <input type="checkbox" id="resizeEnabled">
+                                    <label for="resizeEnabled">Enable</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <label class="settings-label">Split Output (chars)</label>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <input type="number" class="settings-input" id="splitSize" placeholder="e.g. 65000" min="1000" style="width: 120px;">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="splitEnabled">
+                                    <label for="splitEnabled">Enable</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="card" style="margin-bottom: 1rem;">
+                    <div class="card-header">
+                        <span class="card-title">Session Stats</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="statFiles">0</div>
+                                <div class="stat-label">Files</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="statBytes">0</div>
+                                <div class="stat-label">Processed</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="statSpeed">-</div>
+                                <div class="stat-label">Avg Speed</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="statRatio">-</div>
+                                <div class="stat-label">Size Ratio</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">History</span>
+                        <button class="btn btn-sm" id="clearHistoryBtn">Clear</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="history-list" id="historyList">
+                            <div class="history-empty">No history yet</div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <footer>
+            <p>All processing happens locally. No data uploaded. Works offline when installed.</p>
+        </footer>
+    </div>
+
+    <!-- QR Modal -->
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">QR Code</h2>
+                <button class="btn btn-icon" id="closeQrModal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <div class="qr-container" id="qrContainer"></div>
+                <button class="btn btn-primary" id="downloadQrBtn">Download QR</button>
+                <p class="qr-warning" id="qrWarning" style="display: none;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diff Modal -->
+    <div class="modal-overlay" id="diffModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Compare Base64 Strings</h2>
+                <button class="btn btn-icon" id="closeDiffModal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="diff-container">
+                    <div>
+                        <label class="settings-label">String A</label>
+                        <textarea class="diff-input" id="diffInputA" placeholder="Paste first Base64 string..."></textarea>
+                    </div>
+                    <div>
+                        <label class="settings-label">String B</label>
+                        <textarea class="diff-input" id="diffInputB" placeholder="Paste second Base64 string..."></textarea>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="margin-top: 1rem;" id="runDiffBtn">Compare</button>
+                <div class="diff-result" id="diffResult" style="display: none;">
+                    <div class="file-meta" id="diffStats"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    <div role="status" aria-live="polite" class="visually-hidden" id="srStatus"></div>
+
+    <script>
+        // ============================================
+        // WEB WORKER
+        // ============================================
+        const workerCode = `
+            const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+            const B64_URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+            const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            const HEX = '0123456789abcdef';
+            const A85 = '!"#$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_\`abcdefghijklmnopqrstu';
+
+            function encodeBase64(uint8, urlSafe, onProgress) {
+                const chars = urlSafe ? B64_URL : B64;
+                const len = uint8.length;
+                const extra = len % 3;
+                const mainLen = len - extra;
+                let result = '';
+                for (let i = 0; i < mainLen; i += 3) {
+                    const chunk = (uint8[i] << 16) | (uint8[i + 1] << 8) | uint8[i + 2];
+                    result += chars[(chunk >> 18) & 63] + chars[(chunk >> 12) & 63] + chars[(chunk >> 6) & 63] + chars[chunk & 63];
+                    if (i % 30000 === 0 && onProgress) onProgress(i / len);
+                }
+                if (extra === 1) {
+                    const chunk = uint8[mainLen];
+                    result += chars[(chunk >> 2) & 63] + chars[(chunk << 4) & 63];
+                    if (!urlSafe) result += '==';
+                } else if (extra === 2) {
+                    const chunk = (uint8[mainLen] << 8) | uint8[mainLen + 1];
+                    result += chars[(chunk >> 10) & 63] + chars[(chunk >> 4) & 63] + chars[(chunk << 2) & 63];
+                    if (!urlSafe) result += '=';
+                }
+                return result;
+            }
+
+            function encodeBase32(uint8) {
+                let result = '', bits = 0, value = 0;
+                for (let i = 0; i < uint8.length; i++) {
+                    value = (value << 8) | uint8[i];
+                    bits += 8;
+                    while (bits >= 5) {
+                        result += B32[(value >>> (bits - 5)) & 31];
+                        bits -= 5;
+                    }
+                }
+                if (bits > 0) result += B32[(value << (5 - bits)) & 31];
+                while (result.length % 8 !== 0) result += '=';
+                return result;
+            }
+
+            function encodeHex(uint8) {
+                let result = '';
+                for (let i = 0; i < uint8.length; i++) {
+                    result += HEX[(uint8[i] >> 4) & 0xf] + HEX[uint8[i] & 0xf];
+                }
+                return result;
+            }
+
+            function encodeAscii85(uint8) {
+                let result = '<~';
+                const len = uint8.length;
+                for (let i = 0; i < len; i += 4) {
+                    let value = 0;
+                    let count = Math.min(4, len - i);
+                    for (let j = 0; j < 4; j++) {
+                        value = value * 256 + (j < count ? uint8[i + j] : 0);
+                    }
+                    if (value === 0 && count === 4) {
+                        result += 'z';
+                    } else {
+                        let encoded = '';
+                        for (let j = 0; j < 5; j++) {
+                            encoded = A85[value % 85] + encoded;
+                            value = Math.floor(value / 85);
+                        }
+                        result += encoded.substring(0, count + 1);
+                    }
+                }
+                return result + '~>';
+            }
+
+            self.onmessage = function(e) {
+                const { id, buffer, format } = e.data;
+                try {
+                    const data = new Uint8Array(buffer);
+                    const report = (p) => self.postMessage({ id, type: 'progress', progress: p });
+                    let result;
+                    switch (format) {
+                        case 'base64url': result = encodeBase64(data, true, report); break;
+                        case 'base32': result = encodeBase32(data); break;
+                        case 'hex': result = encodeHex(data); break;
+                        case 'ascii85': result = encodeAscii85(data); break;
+                        default: result = encodeBase64(data, false, report);
+                    }
+                    self.postMessage({ id, type: 'complete', result, originalSize: data.length, encodedSize: result.length });
+                } catch (error) {
+                    self.postMessage({ id, type: 'error', error: error.message });
+                }
+            };
+        `;
+        const worker = new Worker(URL.createObjectURL(new Blob([workerCode], { type: 'application/javascript' })));
+
+        // ============================================
+        // MAGIC NUMBERS
+        // ============================================
+        const MAGIC = {
+            'image/png': [[0x89, 0x50, 0x4E, 0x47]],
+            'image/jpeg': [[0xFF, 0xD8, 0xFF]],
+            'image/gif': [[0x47, 0x49, 0x46, 0x38]],
+            'image/webp': [[0x52, 0x49, 0x46, 0x46]],
+            'image/bmp': [[0x42, 0x4D]],
+            'application/pdf': [[0x25, 0x50, 0x44, 0x46]],
+            'application/zip': [[0x50, 0x4B, 0x03, 0x04]],
+            'application/gzip': [[0x1F, 0x8B]],
+            'audio/mpeg': [[0xFF, 0xFB], [0xFF, 0xFA], [0x49, 0x44, 0x33]],
+            'audio/wav': [[0x52, 0x49, 0x46, 0x46]],
+            'video/mp4': [[0x00, 0x00, 0x00]],
+            'video/webm': [[0x1A, 0x45, 0xDF, 0xA3]],
+        };
+
+        function detectMime(uint8) {
+            for (const [mime, sigs] of Object.entries(MAGIC)) {
+                for (const sig of sigs) {
+                    if (sig.every((b, i) => uint8[i] === b)) return mime;
+                }
+            }
+            return 'application/octet-stream';
+        }
+
+        // ============================================
+        // STATE
+        // ============================================
+        let files = new Map();
+        let workerCallbacks = new Map();
+        let workerId = 0;
+        let stats = { files: 0, bytes: 0, totalTime: 0 };
+        let currentOutput = null;
+        let installPrompt = null;
+        let textMode = 'encode';
+
+        // ============================================
+        // DOM HELPERS
+        // ============================================
+        const $ = s => document.querySelector(s);
+        const $$ = s => document.querySelectorAll(s);
+        const genId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+        function formatBytes(b) {
+            if (b === 0) return '0 B';
+            const k = 1024, s = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(b) / Math.log(k));
+            return (b / Math.pow(k, i)).toFixed(i > 0 ? 1 : 0) + ' ' + s[i];
+        }
+
+        function escapeHtml(t) {
+            const d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        }
+
+        function showToast(msg, type = 'info') {
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            $('#toastContainer').appendChild(t);
+            requestAnimationFrame(() => t.classList.add('visible'));
+            setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 300); }, 3000);
+            $('#srStatus').textContent = msg;
+        }
+
+        // ============================================
+        // THEME
+        // ============================================
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            if (saved) document.documentElement.dataset.theme = saved;
+            updateThemeIcon();
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.dataset.theme || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.dataset.theme = next;
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const isDark = (document.documentElement.dataset.theme || 'dark') === 'dark';
+            $('#themeIcon').innerHTML = isDark 
+                ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+                : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+
+        $('#themeToggle').onclick = toggleTheme;
+        initTheme();
+
+        // ============================================
+        // TABS
+        // ============================================
+        $$('.tab').forEach(tab => {
+            tab.onclick = () => {
+                $$('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                $$('.panel').forEach(p => p.style.display = 'none');
+                $(`#${tab.dataset.tab}Panel`).style.display = 'block';
+            };
+        });
+
+        // ============================================
+        // HASHING (MD5 via SparkMD5-like, SHA via SubtleCrypto)
+        // ============================================
+        async function computeHashes(buffer) {
+            const hashes = {};
+            // MD5 - simple implementation
+            hashes.md5 = await computeMD5(new Uint8Array(buffer));
+            // SHA-1 & SHA-256 via SubtleCrypto
+            try {
+                const sha1 = await crypto.subtle.digest('SHA-1', buffer);
+                hashes.sha1 = Array.from(new Uint8Array(sha1)).map(b => b.toString(16).padStart(2, '0')).join('');
+                const sha256 = await crypto.subtle.digest('SHA-256', buffer);
+                hashes.sha256 = Array.from(new Uint8Array(sha256)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                hashes.sha1 = 'N/A';
+                hashes.sha256 = 'N/A';
+            }
+            return hashes;
+        }
+
+        // Simple MD5 implementation
+        function computeMD5(uint8) {
+            function md5cycle(x, k) {
+                let a = x[0], b = x[1], c = x[2], d = x[3];
+                a = ff(a, b, c, d, k[0], 7, -680876936); d = ff(d, a, b, c, k[1], 12, -389564586);
+                c = ff(c, d, a, b, k[2], 17, 606105819); b = ff(b, c, d, a, k[3], 22, -1044525330);
+                a = ff(a, b, c, d, k[4], 7, -176418897); d = ff(d, a, b, c, k[5], 12, 1200080426);
+                c = ff(c, d, a, b, k[6], 17, -1473231341); b = ff(b, c, d, a, k[7], 22, -45705983);
+                a = ff(a, b, c, d, k[8], 7, 1770035416); d = ff(d, a, b, c, k[9], 12, -1958414417);
+                c = ff(c, d, a, b, k[10], 17, -42063); b = ff(b, c, d, a, k[11], 22, -1990404162);
+                a = ff(a, b, c, d, k[12], 7, 1804603682); d = ff(d, a, b, c, k[13], 12, -40341101);
+                c = ff(c, d, a, b, k[14], 17, -1502002290); b = ff(b, c, d, a, k[15], 22, 1236535329);
+                a = gg(a, b, c, d, k[1], 5, -165796510); d = gg(d, a, b, c, k[6], 9, -1069501632);
+                c = gg(c, d, a, b, k[11], 14, 643717713); b = gg(b, c, d, a, k[0], 20, -373897302);
+                a = gg(a, b, c, d, k[5], 5, -701558691); d = gg(d, a, b, c, k[10], 9, 38016083);
+                c = gg(c, d, a, b, k[15], 14, -660478335); b = gg(b, c, d, a, k[4], 20, -405537848);
+                a = gg(a, b, c, d, k[9], 5, 568446438); d = gg(d, a, b, c, k[14], 9, -1019803690);
+                c = gg(c, d, a, b, k[3], 14, -187363961); b = gg(b, c, d, a, k[8], 20, 1163531501);
+                a = gg(a, b, c, d, k[13], 5, -1444681467); d = gg(d, a, b, c, k[2], 9, -51403784);
+                c = gg(c, d, a, b, k[7], 14, 1735328473); b = gg(b, c, d, a, k[12], 20, -1926607734);
+                a = hh(a, b, c, d, k[5], 4, -378558); d = hh(d, a, b, c, k[8], 11, -2022574463);
+                c = hh(c, d, a, b, k[11], 16, 1839030562); b = hh(b, c, d, a, k[14], 23, -35309556);
+                a = hh(a, b, c, d, k[1], 4, -1530992060); d = hh(d, a, b, c, k[4], 11, 1272893353);
+                c = hh(c, d, a, b, k[7], 16, -155497632); b = hh(b, c, d, a, k[10], 23, -1094730640);
+                a = hh(a, b, c, d, k[13], 4, 681279174); d = hh(d, a, b, c, k[0], 11, -358537222);
+                c = hh(c, d, a, b, k[3], 16, -722521979); b = hh(b, c, d, a, k[6], 23, 76029189);
+                a = hh(a, b, c, d, k[9], 4, -640364487); d = hh(d, a, b, c, k[12], 11, -421815835);
+                c = hh(c, d, a, b, k[15], 16, 530742520); b = hh(b, c, d, a, k[2], 23, -995338651);
+                a = ii(a, b, c, d, k[0], 6, -198630844); d = ii(d, a, b, c, k[7], 10, 1126891415);
+                c = ii(c, d, a, b, k[14], 15, -1416354905); b = ii(b, c, d, a, k[5], 21, -57434055);
+                a = ii(a, b, c, d, k[12], 6, 1700485571); d = ii(d, a, b, c, k[3], 10, -1894986606);
+                c = ii(c, d, a, b, k[10], 15, -1051523); b = ii(b, c, d, a, k[1], 21, -2054922799);
+                a = ii(a, b, c, d, k[8], 6, 1873313359); d = ii(d, a, b, c, k[15], 10, -30611744);
+                c = ii(c, d, a, b, k[6], 15, -1560198380); b = ii(b, c, d, a, k[13], 21, 1309151649);
+                a = ii(a, b, c, d, k[4], 6, -145523070); d = ii(d, a, b, c, k[11], 10, -1120210379);
+                c = ii(c, d, a, b, k[2], 15, 718787259); b = ii(b, c, d, a, k[9], 21, -343485551);
+                x[0] = add32(a, x[0]); x[1] = add32(b, x[1]); x[2] = add32(c, x[2]); x[3] = add32(d, x[3]);
+            }
+            function cmn(q, a, b, x, s, t) { a = add32(add32(a, q), add32(x, t)); return add32((a << s) | (a >>> (32 - s)), b); }
+            function ff(a, b, c, d, x, s, t) { return cmn((b & c) | ((~b) & d), a, b, x, s, t); }
+            function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & (~d)), a, b, x, s, t); }
+            function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+            function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | (~d)), a, b, x, s, t); }
+            function add32(a, b) { return (a + b) & 0xFFFFFFFF; }
+            function hex(x) {
+                const hex_chr = '0123456789abcdef';
+                let s = '';
+                for (let i = 0; i < 4; i++) s += hex_chr.charAt((x >> (i * 8 + 4)) & 0x0F) + hex_chr.charAt((x >> (i * 8)) & 0x0F);
+                return s;
+            }
+            
+            const n = uint8.length;
+            let state = [1732584193, -271733879, -1732584194, 271733878];
+            let tail = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            let i, tmp;
+            for (i = 64; i <= n; i += 64) {
+                const blk = [];
+                for (let j = 0; j < 16; j++) {
+                    blk[j] = uint8[i - 64 + j * 4] | (uint8[i - 64 + j * 4 + 1] << 8) | (uint8[i - 64 + j * 4 + 2] << 16) | (uint8[i - 64 + j * 4 + 3] << 24);
+                }
+                md5cycle(state, blk);
+            }
+            for (let j = 0; j < 16; j++) tail[j] = 0;
+            const start = i - 64;
+            for (let j = start; j < n; j++) tail[(j - start) >> 2] |= uint8[j] << (((j - start) % 4) << 3);
+            tail[(n - start) >> 2] |= 0x80 << (((n - start) % 4) << 3);
+            if ((n - start) > 55) { md5cycle(state, tail); for (let j = 0; j < 16; j++) tail[j] = 0; }
+            tail[14] = n * 8;
+            md5cycle(state, tail);
+            return hex(state[0]) + hex(state[1]) + hex(state[2]) + hex(state[3]);
+        }
+
+        // ============================================
+        // FILE PROCESSING
+        // ============================================
+        async function processFile(file, id) {
+            const format = $('#encodingFormat').value;
+            const compress = $('#compressFirst').checked;
+            const includeUri = $('#includeDataUri').checked;
+            const lineWrap = $('#lineWrap').checked;
+            const resize = $('#resizeEnabled').checked;
+            const resizeW = parseInt($('#resizeWidth').value) || 0;
+            const resizeH = parseInt($('#resizeHeight').value) || 0;
+
+            updateFileStatus(id, 'processing', 0);
+            const startTime = performance.now();
+
+            try {
+                let arrayBuffer = await file.arrayBuffer();
+                let data = new Uint8Array(arrayBuffer);
+                let wasCompressed = false;
+                let wasResized = false;
+
+                // Resize images
+                if (resize && file.type.startsWith('image/') && resizeW > 0 && resizeH > 0) {
+                    try {
+                        data = await resizeImage(file, resizeW, resizeH);
+                        arrayBuffer = data.buffer;
+                        wasResized = true;
+                    } catch (e) {
+                        console.warn('Resize failed:', e);
+                    }
+                }
+
+                // Compress
+                if (compress && typeof fflate !== 'undefined') {
+                    const skip = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/', 'audio/', 'application/zip', 'application/gzip'];
+                    if (!skip.some(t => file.type.includes(t))) {
+                        try {
+                            const compressed = fflate.gzipSync(data);
+                            if (compressed.length < data.length * 0.9) {
+                                data = compressed;
+                                wasCompressed = true;
+                                arrayBuffer = data.buffer;
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                const wid = workerId++;
+                return new Promise((resolve, reject) => {
+                    workerCallbacks.set(wid, {
+                        onProgress: p => updateFileStatus(id, 'processing', p),
+                        onComplete: async (result, origSize, encSize) => {
+                            const elapsed = performance.now() - startTime;
+                            let finalResult = result;
+
+                            // Line wrap
+                            if (lineWrap && (format === 'base64' || format === 'base64url')) {
+                                finalResult = result.match(/.{1,76}/g)?.join('\n') || result;
+                            }
+
+                            // Data URI
+                            if (includeUri && format === 'base64') {
+                                const mime = wasCompressed ? 'application/gzip' : file.type || 'application/octet-stream';
+                                finalResult = `data:${mime};base64,${result}`;
+                            }
+
+                            // Hashes
+                            let hashes = null;
+                            if ($('#showHashes').checked) {
+                                hashes = await computeHashes(arrayBuffer);
+                            }
+
+                            const fileData = files.get(id);
+                            fileData.result = finalResult;
+                            fileData.rawResult = result;
+                            fileData.originalSize = origSize;
+                            fileData.encodedSize = encSize;
+                            fileData.wasCompressed = wasCompressed;
+                            fileData.wasResized = wasResized;
+                            fileData.hashes = hashes;
+                            fileData.processingTime = elapsed;
+                            fileData.mimeType = file.type;
+
+                            updateFileStatus(id, 'complete', 100);
+                            updateStats(file.size, elapsed, origSize, result.length);
+
+                            if ($('#saveToHistory').checked) {
+                                saveToHistory(file.name, file.type, file.size, finalResult);
+                            }
+
+                            resolve(finalResult);
+                        },
+                        onError: e => { updateFileStatus(id, 'error', 0); reject(new Error(e)); }
+                    });
+                    worker.postMessage({ id: wid, buffer: arrayBuffer, format }, [arrayBuffer]);
+                });
+            } catch (error) {
+                updateFileStatus(id, 'error', 0);
+                showToast(`Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function resizeImage(file, maxW, maxH) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxW) { h = h * maxW / w; w = maxW; }
+                    if (h > maxH) { w = w * maxH / h; h = maxH; }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    canvas.toBlob(blob => {
+                        blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+                    }, file.type || 'image/png', 0.9);
+                };
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        worker.onmessage = e => {
+            const { id, type, progress, result, originalSize, encodedSize, error } = e.data;
+            const cb = workerCallbacks.get(id);
+            if (!cb) return;
+            if (type === 'progress') cb.onProgress(progress);
+            else if (type === 'complete') { cb.onComplete(result, originalSize, encodedSize); workerCallbacks.delete(id); }
+            else if (type === 'error') { cb.onError(error); workerCallbacks.delete(id); }
+        };
+
+        function updateFileStatus(id, status, progress) {
+            const f = files.get(id);
+            if (f) { f.status = status; f.progress = progress; renderFileList(); }
+        }
+
+        function updateStats(bytes, time, origSize, encSize) {
+            stats.files++;
+            stats.bytes += bytes;
+            stats.totalTime += time;
+            $('#statFiles').textContent = stats.files;
+            $('#statBytes').textContent = formatBytes(stats.bytes);
+            const avgSpeed = stats.bytes / (stats.totalTime / 1000);
+            $('#statSpeed').textContent = formatBytes(avgSpeed) + '/s';
+            const ratio = ((encSize / origSize) * 100).toFixed(0);
+            $('#statRatio').textContent = ratio + '%';
+        }
+
+        // ============================================
+        // FILE LIST RENDERING
+        // ============================================
+        function renderFileList() {
+            if (files.size === 0) {
+                $('#fileList').innerHTML = '';
+                $('#outputSection').style.display = 'none';
+                $('#clearAllBtn').disabled = true;
+                $('#downloadZipBtn').style.display = 'none';
+                return;
+            }
+            $('#clearAllBtn').disabled = false;
+            if (files.size > 1) $('#downloadZipBtn').style.display = 'inline-flex';
+
+            $('#fileList').innerHTML = Array.from(files.entries()).map(([id, d]) => {
+                const isImg = d.file.type.startsWith('image/');
+                const icon = isImg && d.preview ? `<img src="${d.preview}" alt="">` : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+                const status = d.status === 'complete' ? 'complete' : d.status === 'error' ? 'error' : d.status === 'processing' ? 'processing' : '';
+                const prog = d.status === 'processing' ? `<div class="progress-bar"><div class="progress-fill" style="width:${d.progress * 100}%"></div></div>` : '';
+                const badges = [
+                    d.wasCompressed ? '<span class="badge badge-success">gzip</span>' : '',
+                    d.wasResized ? '<span class="badge badge-warning">resized</span>' : ''
+                ].filter(Boolean).join(' ');
+                return `<div class="file-item ${status}">
+                    <div class="file-icon">${icon}</div>
+                    <div class="file-details">
+                        <div class="file-name">${escapeHtml(d.file.name)}</div>
+                        <div class="file-meta"><span>${formatBytes(d.file.size)}</span><span>${d.file.type || 'Unknown'}</span>${badges}</div>
+                        ${prog}
+                    </div>
+                    <div class="file-actions">
+                        ${d.status === 'complete' ? `<button class="btn btn-sm" onclick="showFileOutput('${id}')" title="View"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+                        <button class="btn btn-sm" onclick="removeFile('${id}')" title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        window.showFileOutput = function(id) {
+            const d = files.get(id);
+            if (!d?.result) return;
+            currentOutput = { id, result: d.result, rawResult: d.rawResult, fileName: d.file.name, mimeType: d.mimeType, hashes: d.hashes };
+            
+            // Split output if enabled
+            const splitEnabled = $('#splitEnabled').checked;
+            const splitSize = parseInt($('#splitSize').value) || 0;
+            let displayResult = d.result;
+            if (splitEnabled && splitSize > 0 && d.result.length > splitSize) {
+                const chunks = Math.ceil(d.result.length / splitSize);
+                displayResult = `[Split into ${chunks} chunks of ${splitSize} chars]\n\n--- Chunk 1 ---\n${d.result.substring(0, splitSize)}\n\n[Use JSON export for all chunks]`;
+            }
+            
+            $('#outputText').value = displayResult;
+            $('#outputStats').textContent = `${d.result.length.toLocaleString()} chars`;
+            $('#outputSpeed').textContent = d.processingTime ? `${(d.processingTime).toFixed(0)}ms` : '';
+            $('#outputSection').style.display = 'block';
+
+            // Hashes
+            if (d.hashes && $('#showHashes').checked) {
+                $('#hashMd5').textContent = d.hashes.md5;
+                $('#hashSha1').textContent = d.hashes.sha1;
+                $('#hashSha256').textContent = d.hashes.sha256;
+                $('#hashDisplay').style.display = 'block';
+            } else {
+                $('#hashDisplay').style.display = 'none';
+            }
+
+            // Code snippets
+            if ($('#showCodeSnippets').checked) {
+                $('#codeSnippetSection').style.display = 'block';
+                updateCodeSnippet('html');
+            } else {
+                $('#codeSnippetSection').style.display = 'none';
+            }
+        };
+
+        window.removeFile = function(id) {
+            files.delete(id);
+            if (currentOutput?.id === id) { currentOutput = null; $('#outputSection').style.display = 'none'; }
+            renderFileList();
+        };
+
+        // ============================================
+        // CODE SNIPPETS
+        // ============================================
+        function getCodeSnippet(lang) {
+            if (!currentOutput) return '';
+            const dataUri = currentOutput.result.startsWith('data:') ? currentOutput.result : `data:${currentOutput.mimeType || 'application/octet-stream'};base64,${currentOutput.rawResult || currentOutput.result}`;
+            const b64 = currentOutput.rawResult || currentOutput.result.replace(/^data:[^,]+,/, '');
+            const name = currentOutput.fileName;
+
+            switch (lang) {
+                case 'html':
+                    if (currentOutput.mimeType?.startsWith('image/')) {
+                        return `<img src="${dataUri}" alt="${name}" />`;
+                    }
+                    return `<a href="${dataUri}" download="${name}">Download ${name}</a>`;
+                case 'css':
+                    return `.element {\n  background-image: url('${dataUri}');\n}`;
+                case 'js':
+                    return `// Decode Base64 to Blob\nconst base64 = '${b64.substring(0, 50)}...';\nconst binary = atob(base64);\nconst bytes = new Uint8Array(binary.length);\nfor (let i = 0; i < binary.length; i++) {\n  bytes[i] = binary.charCodeAt(i);\n}\nconst blob = new Blob([bytes], { type: '${currentOutput.mimeType || 'application/octet-stream'}' });`;
+                case 'python':
+                    return `import base64\n\nb64_string = '''${b64.substring(0, 50)}...'''\ndata = base64.b64decode(b64_string)\n\nwith open('${name}', 'wb') as f:\n    f.write(data)`;
+                case 'csharp':
+                    return `string base64 = "${b64.substring(0, 50)}...";\nbyte[] data = Convert.FromBase64String(base64);\nFile.WriteAllBytes("${name}", data);`;
+                case 'json':
+                    return JSON.stringify({
+                        filename: name,
+                        mimeType: currentOutput.mimeType || 'application/octet-stream',
+                        size: currentOutput.result.length,
+                        base64: b64.substring(0, 100) + '...',
+                        hashes: currentOutput.hashes
+                    }, null, 2);
+                default:
+                    return b64;
+            }
+        }
+
+        function updateCodeSnippet(lang) {
+            $('#codeOutput').textContent = getCodeSnippet(lang);
+            $$('.code-tab').forEach(t => t.classList.toggle('active', t.dataset.lang === lang));
+        }
+
+        $$('.code-tab').forEach(t => t.onclick = () => updateCodeSnippet(t.dataset.lang));
+
+        $('#codeSnippetToggle').onclick = () => {
+            const content = $('#codeSnippetContent');
+            const chevron = $('#codeSnippetToggle .chevron');
+            content.classList.toggle('open');
+            chevron.classList.toggle('open');
+        };
+
+        $('#copyCodeBtn').onclick = () => {
+            navigator.clipboard.writeText($('#codeOutput').textContent);
+            showToast('Code copied', 'success');
+        };
+
+        // Hash click to copy
+        $$('.hash-value').forEach(el => {
+            el.onclick = () => {
+                navigator.clipboard.writeText(el.textContent);
+                showToast('Hash copied', 'success');
+            };
+        });
+
+        // ============================================
+        // DRAG & DROP / FILE INPUT
+        // ============================================
+        const dropZone = $('#dropZone');
+        const fileInput = $('#fileInput');
+
+        async function handleFiles(fileList) {
+            for (const file of Array.from(fileList)) {
+                if (file.size > 100 * 1024 * 1024) { showToast(`${file.name} exceeds 100MB`, 'error'); continue; }
+                const id = genId();
+                const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+                files.set(id, { file, status: 'pending', progress: 0, result: null, preview });
+            }
+            renderFileList();
+            for (const [id, d] of files.entries()) {
+                if (d.status === 'pending') {
+                    try { await processFile(d.file, id); } catch (e) { console.error(e); }
+                }
+            }
+            const first = Array.from(files.entries()).find(([_, d]) => d.status === 'complete');
+            if (first) showFileOutput(first[0]);
+        }
+
+        async function getFilesFromEntry(entry) {
+            const result = [];
+            if (entry.isFile) {
+                result.push(await new Promise(r => entry.file(r)));
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                const entries = await new Promise(r => reader.readEntries(r));
+                for (const e of entries) result.push(...await getFilesFromEntry(e));
+            }
+            return result;
+        }
+
+        dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+        dropZone.ondrop = async e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const items = e.dataTransfer.items;
+            const allFiles = [];
+            if (items) {
+                for (const item of items) {
+                    const entry = item.webkitGetAsEntry?.();
+                    if (entry) allFiles.push(...await getFilesFromEntry(entry));
+                }
+            }
+            handleFiles(allFiles.length ? allFiles : e.dataTransfer.files);
+        };
+        dropZone.onclick = () => fileInput.click();
+        dropZone.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } };
+        fileInput.onchange = e => { if (e.target.files.length) { handleFiles(e.target.files); e.target.value = ''; } };
+
+        // Clipboard paste for images
+        document.addEventListener('paste', async e => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        e.preventDefault();
+                        handleFiles([file]);
+                        showToast('Image pasted', 'success');
+                        break;
+                    }
+                }
+            }
+        });
+
+        // ============================================
+        // URL FETCH
+        // ============================================
+        $('#fetchUrlBtn').onclick = async () => {
+            const url = $('#urlInput').value.trim();
+            if (!url) return;
+            try {
+                showToast('Fetching...', 'info');
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Fetch failed');
+                const blob = await response.blob();
+                const name = url.split('/').pop()?.split('?')[0] || 'fetched_file';
+                const file = new File([blob], name, { type: blob.type });
+                handleFiles([file]);
+                $('#urlInput').value = '';
+            } catch (e) {
+                showToast('Failed to fetch URL', 'error');
+            }
+        };
+
+        // ============================================
+        // OUTPUT ACTIONS
+        // ============================================
+        $('#copyBtn').onclick = async () => {
+            if (!currentOutput) return;
+            try {
+                await navigator.clipboard.writeText(currentOutput.result);
+                showToast('Copied', 'success');
+            } catch { showToast('Copy failed', 'error'); }
+        };
+
+        $('#downloadBtn').onclick = async () => {
+            if (!currentOutput) return;
+            const blob = new Blob([currentOutput.result], { type: 'text/plain' });
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({ suggestedName: currentOutput.fileName + '.txt' });
+                    const w = await handle.createWritable();
+                    await w.write(blob);
+                    await w.close();
+                    showToast('Saved', 'success');
+                    return;
+                } catch (e) { if (e.name === 'AbortError') return; }
+            }
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = currentOutput.fileName + '.txt';
+            a.click();
+            showToast('Downloaded', 'success');
+        };
+
+        $('#downloadZipBtn').onclick = async () => {
+            if (typeof fflate === 'undefined' || files.size < 2) return;
+            const zipData = {};
+            for (const [id, d] of files.entries()) {
+                if (d.result) zipData[d.file.name + '.txt'] = fflate.strToU8(d.result);
+            }
+            const zipped = fflate.zipSync(zipData);
+            const blob = new Blob([zipped], { type: 'application/zip' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'base64_files.zip';
+            a.click();
+            showToast('ZIP downloaded', 'success');
+        };
+
+        $('#jsonExportBtn').onclick = () => {
+            if (!currentOutput) return;
+            const splitEnabled = $('#splitEnabled').checked;
+            const splitSize = parseInt($('#splitSize').value) || 0;
+            const b64 = currentOutput.rawResult || currentOutput.result;
+            
+            let chunks = [b64];
+            if (splitEnabled && splitSize > 0 && b64.length > splitSize) {
+                chunks = [];
+                for (let i = 0; i < b64.length; i += splitSize) {
+                    chunks.push(b64.substring(i, i + splitSize));
+                }
+            }
+            
+            const json = JSON.stringify({
+                filename: currentOutput.fileName,
+                mimeType: currentOutput.mimeType,
+                totalLength: b64.length,
+                chunks: chunks.length,
+                hashes: currentOutput.hashes,
+                data: chunks.length === 1 ? chunks[0] : chunks
+            }, null, 2);
+            
+            const blob = new Blob([json], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = currentOutput.fileName + '.json';
+            a.click();
+            showToast('JSON exported', 'success');
+        };
+
+        if (navigator.share) {
+            $('#shareBtn').style.display = 'inline-flex';
+            $('#shareBtn').onclick = async () => {
+                if (!currentOutput) return;
+                try {
+                    await navigator.share({ title: 'Base64', text: currentOutput.result.substring(0, 1000) });
+                } catch {}
+            };
+        }
+
+        // QR Code
+        $('#qrBtn').onclick = () => {
+            if (!currentOutput) return;
+            const data = currentOutput.result;
+            const container = $('#qrContainer');
+            const warning = $('#qrWarning');
+            container.innerHTML = '';
+            warning.style.display = 'none';
+            if (data.length > 2953) {
+                warning.textContent = `Too large (${data.length.toLocaleString()} chars, max ~2953)`;
+                warning.style.display = 'block';
+            }
+            const qrData = data.length > 800 ? data.substring(0, 800) : data;
+            QRCode.toCanvas(qrData, { width: 200, margin: 2 }, (err, canvas) => {
+                if (!err) container.appendChild(canvas);
+            });
+            $('#qrModal').classList.add('visible');
+        };
+
+        $('#closeQrModal').onclick = () => $('#qrModal').classList.remove('visible');
+        $('#qrModal').onclick = e => { if (e.target === $('#qrModal')) $('#qrModal').classList.remove('visible'); };
+        $('#downloadQrBtn').onclick = () => {
+            const canvas = $('#qrContainer canvas');
+            if (!canvas) return;
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'qrcode.png';
+            a.click();
+        };
+
+        $('#clearAllBtn').onclick = () => { files.clear(); currentOutput = null; renderFileList(); showToast('Cleared', 'success'); };
+
+        // ============================================
+        // TEXT PANEL
+        // ============================================
+        $('#textEncodeMode').onclick = () => { textMode = 'encode'; $('#textEncodeMode').classList.add('active'); $('#textDecodeMode').classList.remove('active'); $('#textInput').placeholder = 'Enter text to encode...'; };
+        $('#textDecodeMode').onclick = () => { textMode = 'decode'; $('#textDecodeMode').classList.add('active'); $('#textEncodeMode').classList.remove('active'); $('#textInput').placeholder = 'Enter Base64 to decode...'; };
+
+        $('#textConvertBtn').onclick = () => {
+            const input = $('#textInput').value;
+            if (!input) return;
+            try {
+                if (textMode === 'encode') {
+                    const format = $('#encodingFormat').value;
+                    const bytes = new TextEncoder().encode(input);
+                    let result;
+                    if (format === 'base64' || format === 'base64url') {
+                        result = btoa(String.fromCharCode(...bytes));
+                        if (format === 'base64url') result = result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+                    } else if (format === 'hex') {
+                        result = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+                    } else {
+                        result = btoa(String.fromCharCode(...bytes));
+                    }
+                    if ($('#lineWrap').checked) result = result.match(/.{1,76}/g)?.join('\n') || result;
+                    $('#textOutput').value = result;
+                } else {
+                    let b64 = input.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
+                    while (b64.length % 4) b64 += '=';
+                    const decoded = atob(b64);
+                    $('#textOutput').value = decoded;
+                }
+            } catch (e) {
+                showToast('Conversion failed', 'error');
+            }
+        };
+
+        $('#textCopyBtn').onclick = () => {
+            const text = $('#textOutput').value;
+            if (text) { navigator.clipboard.writeText(text); showToast('Copied', 'success'); }
+        };
+
+        $('#textSwapBtn').onclick = () => {
+            const input = $('#textInput').value;
+            $('#textInput').value = $('#textOutput').value;
+            $('#textOutput').value = input;
+        };
+
+        $('#textClearBtn').onclick = () => { $('#textInput').value = ''; $('#textOutput').value = ''; };
+
+        // ============================================
+        // DECODE PANEL
+        // ============================================
+        $('#pasteBtn').onclick = async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                $('#decodeInput').value = text;
+                showToast('Pasted', 'success');
+            } catch { showToast('Clipboard access denied', 'error'); }
+        };
+
+        $('#clearDecodeBtn').onclick = () => {
+            $('#decodeInput').value = '';
+            $('#decodePreviewContainer').style.display = 'none';
+        };
+
+        function decodeBase64ToBytes(input) {
+            let b64 = input.trim();
+            let mime = 'application/octet-stream';
+            const match = b64.match(/^data:([^;,]+)?(;base64)?,(.+)$/);
+            if (match) { mime = match[1] || mime; b64 = match[3]; }
+            b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const detected = detectMime(bytes);
+            if (detected !== 'application/octet-stream') mime = detected;
+            return { bytes, mime };
+        }
+
+        $('#previewDecodeBtn').onclick = () => {
+            const input = $('#decodeInput').value;
+            if (!input) return;
+            try {
+                const { bytes, mime } = decodeBase64ToBytes(input);
+                const blob = new Blob([bytes], { type: mime });
+                const url = URL.createObjectURL(blob);
+
+                $('#decodePreviewImg').style.display = 'none';
+                $('#decodePreviewVideo').style.display = 'none';
+                $('#decodePreviewAudio').style.display = 'none';
+
+                if (mime.startsWith('image/')) {
+                    $('#decodePreviewImg').src = url;
+                    $('#decodePreviewImg').style.display = 'block';
+                } else if (mime.startsWith('video/')) {
+                    $('#decodePreviewVideo').src = url;
+                    $('#decodePreviewVideo').style.display = 'block';
+                } else if (mime.startsWith('audio/')) {
+                    $('#decodePreviewAudio').src = url;
+                    $('#decodePreviewAudio').style.display = 'block';
+                }
+
+                $('#decodeMetaInfo').innerHTML = `<span>Type: ${mime}</span><span>Size: ${formatBytes(bytes.length)}</span>`;
+                $('#decodePreviewContainer').style.display = 'block';
+            } catch (e) {
+                showToast('Invalid Base64', 'error');
+            }
+        };
+
+        $('#decodeBtn').onclick = async () => {
+            const input = $('#decodeInput').value;
+            if (!input) return;
+            try {
+                const { bytes, mime } = decodeBase64ToBytes(input);
+                const ext = mime.split('/')[1]?.split('+')[0] || 'bin';
+                const fileName = `decoded.${ext}`;
+                const blob = new Blob([bytes], { type: mime });
+
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        const handle = await window.showSaveFilePicker({ suggestedName: fileName });
+                        const w = await handle.createWritable();
+                        await w.write(blob);
+                        await w.close();
+                        showToast('Saved', 'success');
+                        return;
+                    } catch (e) { if (e.name === 'AbortError') return; }
+                }
+
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = fileName;
+                a.click();
+                showToast('Downloaded', 'success');
+            } catch (e) {
+                showToast('Invalid Base64', 'error');
+            }
+        };
+
+        // ============================================
+        // DIFF TOOL
+        // ============================================
+        $('#diffToggle').onclick = () => $('#diffModal').classList.add('visible');
+        $('#closeDiffModal').onclick = () => $('#diffModal').classList.remove('visible');
+        $('#diffModal').onclick = e => { if (e.target === $('#diffModal')) $('#diffModal').classList.remove('visible'); };
+
+        $('#runDiffBtn').onclick = () => {
+            const a = $('#diffInputA').value.replace(/\s/g, '');
+            const b = $('#diffInputB').value.replace(/\s/g, '');
+            if (!a || !b) return;
+
+            const lenA = a.length, lenB = b.length;
+            let matches = 0;
+            const minLen = Math.min(lenA, lenB);
+            for (let i = 0; i < minLen; i++) {
+                if (a[i] === b[i]) matches++;
+            }
+            const similarity = ((matches / Math.max(lenA, lenB)) * 100).toFixed(1);
+            const identical = a === b;
+
+            $('#diffStats').innerHTML = `
+                <span>Length A: ${lenA.toLocaleString()}</span>
+                <span>Length B: ${lenB.toLocaleString()}</span>
+                <span>Difference: ${Math.abs(lenA - lenB).toLocaleString()} chars</span>
+                <span class="${identical ? 'diff-match' : 'diff-mismatch'}">
+                    ${identical ? 'Identical' : `${similarity}% similar`}
+                </span>
+            `;
+            $('#diffResult').style.display = 'block';
+        };
+
+        // ============================================
+        // HISTORY
+        // ============================================
+        function loadHistory() {
+            try { return JSON.parse(localStorage.getItem('b64_history') || '[]'); } catch { return []; }
+        }
+
+        function saveToHistory(name, type, size, result) {
+            const history = loadHistory();
+            history.unshift({
+                id: genId(), name, type, size,
+                result: result.length > 8000 ? result.substring(0, 8000) : result,
+                truncated: result.length > 8000,
+                timestamp: Date.now()
+            });
+            if (history.length > 50) history.pop();
+            try { localStorage.setItem('b64_history', JSON.stringify(history)); } catch {}
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const history = loadHistory();
+            if (history.length === 0) {
+                $('#historyList').innerHTML = '<div class="history-empty">No history yet</div>';
+                return;
+            }
+            $('#historyList').innerHTML = history.map(h => {
+                const ext = h.name.split('.').pop()?.toUpperCase().substring(0, 3) || '?';
+                const ago = formatTimeAgo(h.timestamp);
+                return `<div class="history-item" onclick="loadHistoryItem('${h.id}')">
+                    <div class="history-icon">${ext}</div>
+                    <div class="history-details">
+                        <div class="history-name">${escapeHtml(h.name)}</div>
+                        <div class="history-meta">${formatBytes(h.size)} • ${ago}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function formatTimeAgo(ts) {
+            const s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 60) return 'just now';
+            if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+            if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+            return `${Math.floor(s / 86400)}d ago`;
+        }
+
+        window.loadHistoryItem = function(id) {
+            const h = loadHistory().find(x => x.id === id);
+            if (!h) return;
+            currentOutput = { id, result: h.result, fileName: h.name, mimeType: h.type };
+            $('#outputText').value = h.result + (h.truncated ? '\n\n[Truncated]' : '');
+            $('#outputStats').textContent = `${h.result.length.toLocaleString()} chars`;
+            $('#outputSection').style.display = 'block';
+            $$('.tab')[0].click();
+            showToast('Loaded from history', 'success');
+        };
+
+        $('#clearHistoryBtn').onclick = () => {
+            localStorage.removeItem('b64_history');
+            renderHistory();
+            showToast('History cleared', 'success');
+        };
+
+        // ============================================
+        // PWA
+        // ============================================
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            installPrompt = e;
+            $('#installBtn').style.display = 'inline-flex';
+        });
+
+        $('#installBtn').onclick = async () => {
+            if (!installPrompt) return;
+            installPrompt.prompt();
+            const result = await installPrompt.userChoice;
+            if (result.outcome === 'accepted') showToast('Installed!', 'success');
+            installPrompt = null;
+            $('#installBtn').style.display = 'none';
+        };
+
+        // ============================================
+        // KEYBOARD SHORTCUTS
+        // ============================================
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                $$('.modal-overlay.visible').forEach(m => m.classList.remove('visible'));
+            }
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        renderHistory();
+    </script>
+</body>
+</html>
