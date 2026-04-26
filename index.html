@@ -36,6 +36,7 @@
             --error: #f85149;
             --purple: #a371f7;
             --orange: #f0883e;
+            --output-font-size: 13px;
         }
 
         [data-theme="light"] {
@@ -428,7 +429,7 @@
             padding: 0.875rem;
             color: var(--text-primary);
             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
-            font-size: 0.8rem;
+            font-size: var(--output-font-size);
             line-height: 1.5;
             resize: vertical;
             word-break: break-all;
@@ -521,7 +522,7 @@
             border-radius: 6px;
             padding: 0.75rem;
             font-family: 'SF Mono', Monaco, monospace;
-            font-size: 0.75rem;
+            font-size: var(--output-font-size);
             overflow-x: auto;
             white-space: pre-wrap;
             word-break: break-all;
@@ -539,7 +540,7 @@
             padding: 0.875rem;
             color: var(--text-primary);
             font-family: 'SF Mono', Monaco, monospace;
-            font-size: 0.85rem;
+            font-size: var(--output-font-size);
             line-height: 1.5;
             resize: vertical;
         }
@@ -1053,6 +1054,18 @@
             cursor: pointer;
         }
         .pem-select:focus { outline: none; border-color: var(--accent); }
+
+        /* Font size slider in header */
+        .font-size-control {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            user-select: none;
+            letter-spacing: 0.03em;
+        }
+        .font-size-control input[type=range] { width: 60px; cursor: pointer; accent-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -1066,6 +1079,10 @@
                 <button class="btn btn-sm" id="installBtn" style="display: none;" title="Install as app">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
+                <label class="font-size-control" title="Output font size">
+                    <span>Aa</span>
+                    <input type="range" id="fontSizeSlider" min="11" max="20" step="1" value="13" title="Output font size">
+                </label>
                 <button class="btn btn-icon" id="diffToggle" title="Compare Base64 strings">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 </button>
@@ -1151,6 +1168,10 @@
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                                         Share
                                     </button>
+                                    <button class="btn" id="copyLinkBtn" title="Copy shareable link">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                        Copy Link
+                                    </button>
                                 </div>
 
                                 <!-- Hash Display -->
@@ -1182,6 +1203,8 @@
                                             <button class="code-tab" data-lang="ruby">Ruby</button>
                                             <button class="code-tab" data-lang="kotlin">Kotlin</button>
                                             <button class="code-tab" data-lang="json">JSON</button>
+                                            <button class="code-tab" data-lang="curl">curl</button>
+                                            <button class="code-tab" data-lang="wget">wget</button>
                                         </div>
                                         <div class="code-output" id="codeOutput"></div>
                                         <button class="btn btn-sm" style="margin-top: 0.5rem;" id="copyCodeBtn">Copy Code</button>
@@ -1238,6 +1261,9 @@
                         </div>
                         <div class="card-body">
                             <textarea class="text-input" id="decodeInput" placeholder="Paste Base64 string here (with or without data URI prefix)..."></textarea>
+                            <div id="formatDetectBadge" style="display:none; margin-top: 0.4rem; font-size: 0.72rem; color: var(--text-muted);">
+                                Detected: <span id="formatDetectLabel" style="color: var(--accent); font-weight: 600;"></span>
+                            </div>
                             
                             <div class="decode-actions" style="margin-top: 1rem;">
                                 <button class="btn btn-primary" id="decodeBtn">
@@ -1345,6 +1371,7 @@
                                 <option value="base32">Base32</option>
                                 <option value="hex">Hexadecimal</option>
                                 <option value="ascii85">ASCII85 (Base85)</option>
+                                <option value="base58">Base58 (Bitcoin)</option>
                             </select>
                         </div>
                         
@@ -1509,7 +1536,8 @@
             const B64_URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
             const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
             const HEX = '0123456789abcdef';
-            const A85 = '!"#$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_\`abcdefghijklmnopqrstu';
+            const A85 = '!"#$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_\`abcdefghijkmnopqrstu';
+            const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
             function encodeBase64(uint8, urlSafe, onProgress) {
                 const chars = urlSafe ? B64_URL : B64;
@@ -1580,6 +1608,26 @@
                 return result + '~>';
             }
 
+            function encodeBase58(uint8) {
+                const digits = [0];
+                for (let i = 0; i < uint8.length; i++) {
+                    let carry = uint8[i];
+                    for (let j = 0; j < digits.length; j++) {
+                        carry += digits[j] << 8;
+                        digits[j] = carry % 58;
+                        carry = Math.floor(carry / 58);
+                    }
+                    while (carry > 0) {
+                        digits.push(carry % 58);
+                        carry = Math.floor(carry / 58);
+                    }
+                }
+                let result = '';
+                for (let i = 0; i < uint8.length && uint8[i] === 0; i++) result += '1';
+                for (let i = digits.length - 1; i >= 0; i--) result += B58[digits[i]];
+                return result;
+            }
+
             self.onmessage = function(e) {
                 const { id, buffer, format } = e.data;
                 try {
@@ -1591,6 +1639,7 @@
                         case 'base32': result = encodeBase32(data); break;
                         case 'hex': result = encodeHex(data); break;
                         case 'ascii85': result = encodeAscii85(data); break;
+                        case 'base58': result = encodeBase58(data); break;
                         default: result = encodeBase64(data, false, report);
                     }
                     self.postMessage({ id, type: 'complete', result, originalSize: data.length, encodedSize: result.length });
@@ -2084,6 +2133,10 @@
                         base64: b64Short,
                         hashes: currentOutput.hashes
                     }, null, 2);
+                case 'curl':
+                    return `curl -X POST https://example.com/upload \\\n  -H "Content-Type: application/octet-stream" \\\n  -d "@-" << 'EOF'\n${b64Short}\nEOF`;
+                case 'wget':
+                    return `wget --post-data="${b64Short}" \\\n  --header="Content-Type: application/octet-stream" \\\n  --output-document="${name}" \\\n  https://example.com/decode`;
                 default:
                     return b64;
             }
@@ -2774,6 +2827,66 @@
 
             showToast('Data loaded from URL — check for sensitive content before sharing links', 'warning');
         }
+
+        // ============================================
+        // FONT SIZE SLIDER
+        // ============================================
+        const fontSizeSlider = $('#fontSizeSlider');
+        const savedFontSize = localStorage.getItem('b64_fontsize') || '13';
+        fontSizeSlider.value = savedFontSize;
+        document.documentElement.style.setProperty('--output-font-size', savedFontSize + 'px');
+        
+        fontSizeSlider.addEventListener('input', (e) => {
+            const size = e.target.value;
+            localStorage.setItem('b64_fontsize', size);
+            document.documentElement.style.setProperty('--output-font-size', size + 'px');
+        });
+
+        // ============================================
+        // FORMAT DETECTION
+        // ============================================
+        function detectFormat(str) {
+            str = str.replace(/^data:[^,]+,/, '').trim();
+            const hexTest = /^[0-9a-f]+$/i;
+            const b32Test = /^[A-Z2-7=]+$/;
+            const b58Test = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+            const a85Test = /^<~.*~>$/;
+            const urlSafeTest = /^[A-Za-z0-9\-_]+={0,2}$/;
+            const b64Test = /^[A-Za-z0-9+/]+={0,2}$/;
+            
+            if (a85Test.test(str)) return 'ASCII85';
+            if (hexTest.test(str) && str.length % 2 === 0) return 'Hex';
+            if (b58Test.test(str)) return 'Base58';
+            if (b32Test.test(str)) return 'Base32';
+            if (urlSafeTest.test(str)) return 'Base64URL';
+            if (b64Test.test(str)) return 'Base64';
+            return null;
+        }
+
+        $('#decodeInput').addEventListener('input', () => {
+            const val = $('#decodeInput').value.trim();
+            const detected = val ? detectFormat(val) : null;
+            const badge = $('#formatDetectBadge');
+            const label = $('#formatDetectLabel');
+            if (detected) {
+                label.textContent = detected;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        });
+
+        // ============================================
+        // COPY LINK
+        // ============================================
+        $('#copyLinkBtn').onclick = () => {
+            if (!currentOutput) return;
+            const base = window.location.origin + window.location.pathname;
+            const format = $('#encodingFormat').value;
+            const link = `${base}?data=${encodeURIComponent(currentOutput.result)}&mode=decode&format=${format}`;
+            navigator.clipboard.writeText(link);
+            showToast('Link copied', 'success');
+        };
 
         // Register service worker for offline support
         if ('serviceWorker' in navigator) {
