@@ -1,0 +1,43 @@
+{
+  "name": "Base64 Converter Pro",
+  "short_name": "B64 Pro",
+  "description": "Professional Base64 encoder/decoder with compression, multiple formats, JWT decoding, code generation, and offline support",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["developer-tools", "utilities"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Encode File",
+      "url": "./index.html?tab=encode",
+      "description": "Encode a file to Base64"
+    },
+    {
+      "name": "Decode Base64",
+      "url": "./index.html?tab=decode",
+      "description": "Decode a Base64 string"
+    },
+    {
+      "name": "JWT Decoder",
+      "url": "./index.html?tab=jwt",
+      "description": "Decode a JSON Web Token"
+    }
+  ]
+}
