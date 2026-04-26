@@ -5,6 +5,91 @@ Single-file HTML/JS Base64 encoder/decoder with compression (fflate), QR generat
 ## Planned Features
 
 ### Core encoding
+- [x] **Base64URL** variant toggle (RFC 4648 §5, `-` / `_`, no padding) — first-class, not an afterthought *(v0.1.0)*
+- [x] **MIME multi-line** output mode (RFC 2045, 76-char wrap) *(v0.1.0)*
+- [x] **Base32** and **Base58** (bitcoin alphabet) tabs *(v0.1.0 — Base32/Hex/Ascii85; Base58 not implemented)*
+- [x] **Hex** and **Base16** dual-view underneath every encode *(v0.1.0)*
+- [x] **Ascii85 / Base85** *(v0.1.0)*
+- [ ] Live streaming encode for files >100 MB (chunked FileReader → `ReadableStream`)
+
+### File workflows
+- [x] Drag-drop multiple files → ZIP of individual `.txt` outputs *(v0.1.0)*
+- [x] Drop a Base64 `.txt` and auto-detect MIME from content sniff, offer download with correct extension *(v0.1.0)*
+- [x] PDF/PNG/SVG preview in-line when decoded payload is recognized *(v0.1.0)*
+- [x] Data-URI builder with MIME picker + clipboard copy *(v0.1.0)*
+- [x] **PEM block assembler** — wrap with `-----BEGIN/END CERTIFICATE-----` headers *(v0.2.0)*
+- [x] **File-size + encoded-size indicator** — `1.2 MB → 1.6 MB (+33%)` per file item *(v0.2.0)*
+
+### Code generation
+- [x] Snippet output for: JavaScript, TypeScript, Python, PowerShell, C#, Go, Rust, Bash, PHP, Ruby, Kotlin, HTML, CSS, JSON *(v0.2.0 — 14 languages)*
+- [ ] Copy-as-`curl` data URI
+- [ ] WASM decode-on-load bootstrap template
+
+### Extra tools
+- [x] **JWT decoder** — split by `.`, Base64URL decode header + payload, show signature length, human-readable timestamps, expiry badge *(v0.2.0)*
+- [x] QR encode of any Base64 string with size/EC level controls *(v0.1.0)*
+- [x] Hash the original + the encoded (SHA-1, SHA-256, MD5) *(v0.1.0)*
+- [x] Gzip + Base64 combined mode ("compressed data URI") *(v0.1.0)*
+- [x] URL → fetch → encode pipeline *(v0.1.0)*
+
+### UI / UX
+- [x] Split-pane live diff as you type *(v0.1.0)*
+- [x] Persistent "recent conversions" in `localStorage` *(v0.1.0)*
+- [x] **Live text encoding/decoding** — 200ms debounce *(v0.2.0)*
+- [x] **ARIA** — `aria-selected` on all tabs *(v0.2.0)*
+- [x] **Offline PWA install** (`manifest.json`, service worker cache) *(v0.2.0)*
+- [ ] Font-size + mono-font picker (IBM Plex, JetBrains, Cascadia)
+- [ ] Command palette (`Ctrl+K`) over tools and samples
+
+### Integrations
+- [x] **GitHub Pages deployment workflow** *(v0.2.0)*
+- [x] **`?data=...&mode=decode|text|jwt` deep links** for shareable conversions *(v0.2.0)*
+- [ ] VS Code extension wrapper reusing the same engine
+
+## Competitive Research
+- **base64decode.org / base64encode.org** — de-facto online baseline; "live mode" runs in-browser. Our edge: offline-first, batch, code generation.
+- **base64.guru** — strong decode UX with MIME detection, file preview, hex dump, size metadata. Worth matching.
+- **jam.dev / 64baser.com** — clean UIs, URL-safe variant, free. Both lack batch + code generation.
+- **CodeBeautify** — has URL-load input and many format converters; cluttered. Differentiate via dense single-file polish.
+
+## Nice-to-Haves
+- RSA / EC key import from Base64 → show modulus / curve / bit length
+- CSR decoder (pkijs) — turn a PEM CSR into a human-readable block
+- DNS TXT record builder (Base64 SPF / DKIM snippets)
+- Right-to-left text preview
+- Keyboard-only power user mode with chorded shortcuts
+- Browser-extension wrapper (MV3) that adds a "Decode Base64" context-menu action on any selected text
+- Base58 variant (bitcoin alphabet)
+- Copy-as-`curl` data URI snippet
+- Font-size + mono-font picker (IBM Plex, JetBrains, Cascadia)
+- Command palette (`Ctrl+K`) over tools and samples
+- VS Code extension wrapper
+
+## Open-Source Research (Round 2)
+
+### Related OSS Projects
+- **progers/base64** — https://github.com/progers/base64 — Small, fast, offline-capable encoder/decoder tested across Chrome/Firefox/Safari/Edge/IE11/Android.
+- **hollandben/base64-image-encoder** — https://github.com/hollandben/base64-image-encoder — Drag & drop image encoder reference.
+- **dmackerman/base64-encoder** — https://github.com/dmackerman/base64-encoder — HTML5 drag/drop base64 encoder.
+- **emn178/online-tools** — https://github.com/emn178/online-tools — Full set of encoders supporting RFC 4648 standard + URL-safe, RFC 2045 MIME, RFC 2152 UTF-7, RFC 3501 IMAP.
+- **GetZenQuery Base64 Image Encoder** — https://www.getzenquery.com/tools/base64-image-encoder/ (MIT, GitHub-linked) — Client-side PNG/JPEG/GIF/WebP/SVG/BMP with decode-back-to-image mode.
+
+### Features to Borrow (Implemented v0.2.0)
+- [x] **File-size + encoded-size indicator** (GetZenQuery) — `1.2 MB PNG → 1.6 MB base64 (+33%)`
+- [x] **PEM wrapping helpers** — wrap/unwrap with `-----BEGIN CERTIFICATE-----` headers
+- [x] **Offline PWA with service worker** — `manifest.json` + SW precaches the single HTML
+
+### Features Still Pending
+- [ ] **Multi-RFC support** (emn178/online-tools) — RFC 2152 UTF-7, RFC 3501 IMAP variants
+- [ ] **Auto-detect mixed encodings** (HyperDecode pattern) — auto-detect Base64/Hex/Binary/Morse
+- [ ] **Clipboard paste for binary** — `Clipboard API readImage` for screenshot paste
+
+
+Single-file HTML/JS Base64 encoder/decoder with compression (fflate), QR generation, batch processing, code generation, and dark/light themes. Runs entirely client-side.
+
+## Planned Features
+
+### Core encoding
 - **Base64URL** variant toggle (RFC 4648 §5, `-` / `_`, no padding) — first-class, not an afterthought
 - **MIME multi-line** output mode (RFC 2045, 76-char wrap)
 - **Base32** and **Base58** (bitcoin alphabet) tabs for completeness

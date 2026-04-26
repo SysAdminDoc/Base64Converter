@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect width=%221%22 height=%221%22 fill=%22%23cdd6f4%22/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect width=%221%22 height=%221%22 fill=%22%2358a6ff%22/></svg>">
+    <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
@@ -995,6 +996,63 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* JWT Decoder */
+        .jwt-section { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
+        .jwt-part { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
+        .jwt-part-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .jwt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .jwt-dot-h { background: var(--accent); }
+        .jwt-dot-p { background: var(--purple); }
+        .jwt-dot-s { background: var(--warning); }
+        .jwt-part-body {
+            padding: 0.75rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.78rem;
+            white-space: pre;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+        .jwt-valid { color: var(--success); font-weight: 500; }
+        .jwt-expired { color: var(--error); font-weight: 500; }
+        .jwt-info-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            padding: 0.625rem 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        /* PEM section */
+        .pem-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+        .pem-select {
+            padding: 0.375rem 0.5rem;
+            font-size: 0.8rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .pem-select:focus { outline: none; border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -1019,9 +1077,10 @@
 
         <!-- Mode Tabs -->
         <div class="tabs" role="tablist">
-            <button class="tab active" role="tab" data-tab="encode">File Encode</button>
-            <button class="tab" role="tab" data-tab="text">Text</button>
-            <button class="tab" role="tab" data-tab="decode">Decode</button>
+            <button class="tab active" role="tab" aria-selected="true" data-tab="encode">File Encode</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="text">Text</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="decode">Decode</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="jwt">JWT</button>
         </div>
 
         <div class="main-grid">
@@ -1111,9 +1170,17 @@
                                         <div class="code-tabs" style="margin-top: 0.75rem;">
                                             <button class="code-tab active" data-lang="html">HTML</button>
                                             <button class="code-tab" data-lang="css">CSS</button>
-                                            <button class="code-tab" data-lang="js">JavaScript</button>
+                                            <button class="code-tab" data-lang="js">JS</button>
+                                            <button class="code-tab" data-lang="typescript">TS</button>
                                             <button class="code-tab" data-lang="python">Python</button>
                                             <button class="code-tab" data-lang="csharp">C#</button>
+                                            <button class="code-tab" data-lang="powershell">PS</button>
+                                            <button class="code-tab" data-lang="go">Go</button>
+                                            <button class="code-tab" data-lang="rust">Rust</button>
+                                            <button class="code-tab" data-lang="bash">Bash</button>
+                                            <button class="code-tab" data-lang="php">PHP</button>
+                                            <button class="code-tab" data-lang="ruby">Ruby</button>
+                                            <button class="code-tab" data-lang="kotlin">Kotlin</button>
                                             <button class="code-tab" data-lang="json">JSON</button>
                                         </div>
                                         <div class="code-output" id="codeOutput"></div>
@@ -1186,6 +1253,76 @@
                                 <video class="preview-media" id="decodePreviewVideo" controls style="display: none;"></video>
                                 <audio class="preview-media" id="decodePreviewAudio" controls style="display: none;"></audio>
                                 <div class="file-meta" id="decodeMetaInfo" style="margin-top: 0.5rem;"></div>
+                            </div>
+
+                            <!-- PEM Wrap / Unwrap -->
+                            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                                <div class="collapsible-header" id="pemToggle">
+                                    <span class="settings-label" style="margin: 0;">PEM Wrap / Unwrap</span>
+                                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </div>
+                                <div class="collapsible-content" id="pemContent">
+                                    <div class="pem-controls">
+                                        <select class="pem-select" id="pemType">
+                                            <option value="CERTIFICATE">CERTIFICATE</option>
+                                            <option value="PUBLIC KEY">PUBLIC KEY</option>
+                                            <option value="PRIVATE KEY">PRIVATE KEY</option>
+                                            <option value="RSA PRIVATE KEY">RSA PRIVATE KEY</option>
+                                            <option value="CERTIFICATE REQUEST">CERTIFICATE REQUEST</option>
+                                            <option value="EC PRIVATE KEY">EC PRIVATE KEY</option>
+                                        </select>
+                                        <button class="btn btn-sm" id="pemWrapBtn">Wrap → PEM</button>
+                                        <button class="btn btn-sm" id="pemUnwrapBtn">Unwrap PEM →</button>
+                                    </div>
+                                    <textarea class="text-input" id="pemOutput" placeholder="PEM output will appear here..." style="min-height: 100px; margin-top: 0.75rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.75rem;" readonly></textarea>
+                                    <button class="btn btn-sm" style="margin-top: 0.5rem;" id="copyPemBtn">Copy PEM</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ JWT PANEL ============ -->
+                <div id="jwtPanel" class="panel" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">JWT Decoder</span>
+                            <button class="btn btn-sm" id="jwtPasteBtn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                                Paste
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <textarea class="text-input" id="jwtInput" placeholder="Paste a JSON Web Token (header.payload.signature)..." style="min-height: 80px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem;"></textarea>
+                            <div class="output-actions" style="margin-top: 0.75rem;">
+                                <button class="btn btn-primary" id="jwtDecodeBtn">Decode</button>
+                                <button class="btn" id="jwtClearBtn">Clear</button>
+                            </div>
+                            <div id="jwtOutput" style="display: none; margin-top: 1rem;">
+                                <div class="jwt-info-row" id="jwtInfoRow"></div>
+                                <div class="jwt-section">
+                                    <div class="jwt-part">
+                                        <div class="jwt-part-header">
+                                            <span class="jwt-dot jwt-dot-h"></span>
+                                            Header
+                                        </div>
+                                        <pre class="jwt-part-body" id="jwtHeaderBody"></pre>
+                                    </div>
+                                    <div class="jwt-part">
+                                        <div class="jwt-part-header">
+                                            <span class="jwt-dot jwt-dot-p"></span>
+                                            Payload
+                                        </div>
+                                        <pre class="jwt-part-body" id="jwtPayloadBody"></pre>
+                                    </div>
+                                    <div class="jwt-part">
+                                        <div class="jwt-part-header">
+                                            <span class="jwt-dot jwt-dot-s"></span>
+                                            Signature
+                                        </div>
+                                        <pre class="jwt-part-body" id="jwtSigBody"></pre>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1310,7 +1447,7 @@
         </div>
 
         <footer>
-            <p>All processing happens locally. No data uploaded. Works offline when installed.</p>
+            <p>All processing happens locally. No data uploaded. Works offline when installed. &nbsp;·&nbsp; <strong>Base64 Converter Pro v0.2.0</strong></p>
         </footer>
     </div>
 
@@ -1564,8 +1701,9 @@
         // ============================================
         $$('.tab').forEach(tab => {
             tab.onclick = () => {
-                $$('.tab').forEach(t => t.classList.remove('active'));
+                $$('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
                 tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
                 $$('.panel').forEach(p => p.style.display = 'none');
                 $(`#${tab.dataset.tab}Panel`).style.display = 'block';
             };
@@ -1835,11 +1973,14 @@
                     d.wasCompressed ? '<span class="badge badge-success">gzip</span>' : '',
                     d.wasResized ? '<span class="badge badge-warning">resized</span>' : ''
                 ].filter(Boolean).join(' ');
+                const sizeRatio = (d.status === 'complete' && d.originalSize != null && d.encodedSize != null)
+                    ? ` → ${formatBytes(d.encodedSize)} (${d.encodedSize >= d.originalSize ? '+' : ''}${Math.round((d.encodedSize / d.originalSize - 1) * 100)}%)`
+                    : '';
                 return `<div class="file-item ${status}">
                     <div class="file-icon">${icon}</div>
                     <div class="file-details">
                         <div class="file-name">${escapeHtml(d.file.name)}</div>
-                        <div class="file-meta"><span>${formatBytes(d.file.size)}</span><span>${d.file.type || 'Unknown'}</span>${badges}</div>
+                        <div class="file-meta"><span>${formatBytes(d.file.size)}${sizeRatio}</span><span>${d.file.type || 'Unknown'}</span>${badges}</div>
                         ${prog}
                     </div>
                     <div class="file-actions">
@@ -1901,28 +2042,46 @@
             if (!currentOutput) return '';
             const dataUri = currentOutput.result.startsWith('data:') ? currentOutput.result : `data:${currentOutput.mimeType || 'application/octet-stream'};base64,${currentOutput.rawResult || currentOutput.result}`;
             const b64 = currentOutput.rawResult || currentOutput.result.replace(/^data:[^,]+,/, '');
+            const b64Short = b64.substring(0, 60) + (b64.length > 60 ? '...' : '');
             const name = currentOutput.fileName;
+            const mime = currentOutput.mimeType || 'application/octet-stream';
 
             switch (lang) {
                 case 'html':
-                    if (currentOutput.mimeType?.startsWith('image/')) {
+                    if (mime.startsWith('image/')) {
                         return `<img src="${dataUri}" alt="${name}" />`;
                     }
                     return `<a href="${dataUri}" download="${name}">Download ${name}</a>`;
                 case 'css':
                     return `.element {\n  background-image: url('${dataUri}');\n}`;
                 case 'js':
-                    return `// Decode Base64 to Blob\nconst base64 = '${b64.substring(0, 50)}...';\nconst binary = atob(base64);\nconst bytes = new Uint8Array(binary.length);\nfor (let i = 0; i < binary.length; i++) {\n  bytes[i] = binary.charCodeAt(i);\n}\nconst blob = new Blob([bytes], { type: '${currentOutput.mimeType || 'application/octet-stream'}' });`;
+                    return `// Decode Base64 to Blob\nconst base64 = '${b64Short}';\nconst binary = atob(base64);\nconst bytes = new Uint8Array(binary.length);\nfor (let i = 0; i < binary.length; i++) {\n  bytes[i] = binary.charCodeAt(i);\n}\nconst blob = new Blob([bytes], { type: '${mime}' });\nconst url = URL.createObjectURL(blob);`;
+                case 'typescript':
+                    return `// Decode Base64 in TypeScript / Node.js\nconst base64: string = '${b64Short}';\nconst buffer = Buffer.from(base64, 'base64');\nimport { writeFileSync } from 'fs';\nwriteFileSync('${name}', buffer);`;
                 case 'python':
-                    return `import base64\n\nb64_string = '''${b64.substring(0, 50)}...'''\ndata = base64.b64decode(b64_string)\n\nwith open('${name}', 'wb') as f:\n    f.write(data)`;
+                    return `import base64\n\nb64 = '${b64Short}'\ndata = base64.b64decode(b64)\n\nwith open('${name}', 'wb') as f:\n    f.write(data)`;
                 case 'csharp':
-                    return `string base64 = "${b64.substring(0, 50)}...";\nbyte[] data = Convert.FromBase64String(base64);\nFile.WriteAllBytes("${name}", data);`;
+                    return `string base64 = "${b64Short}";\nbyte[] data = Convert.FromBase64String(base64);\nFile.WriteAllBytes("${name}", data);`;
+                case 'powershell':
+                    return `$base64 = '${b64Short}'\n$bytes = [Convert]::FromBase64String($base64)\n[System.IO.File]::WriteAllBytes('${name}', $bytes)`;
+                case 'go':
+                    return `package main\n\nimport (\n\t"encoding/base64"\n\t"os"\n)\n\nfunc main() {\n\tb64 := "${b64Short}"\n\tdata, _ := base64.StdEncoding.DecodeString(b64)\n\tos.WriteFile("${name}", data, 0644)\n}`;
+                case 'rust':
+                    return `use base64::{Engine, engine::general_purpose};\nuse std::fs;\n\nfn main() {\n    let b64 = "${b64Short}";\n    let data = general_purpose::STANDARD.decode(b64).unwrap();\n    fs::write("${name}", data).unwrap();\n}`;
+                case 'bash':
+                    return `# Decode Base64 and write to file\nprintf '%s' '${b64Short}' | base64 -d > '${name}'`;
+                case 'php':
+                    return `<?php\n$base64 = '${b64Short}';\n$data = base64_decode($base64);\nfile_put_contents('${name}', $data);`;
+                case 'ruby':
+                    return `require 'base64'\n\nb64 = '${b64Short}'\ndata = Base64.decode64(b64)\nFile.binwrite('${name}', data)`;
+                case 'kotlin':
+                    return `import java.util.Base64\nimport java.io.File\n\nval b64 = "${b64Short}"\nval data = Base64.getDecoder().decode(b64)\nFile("${name}").writeBytes(data)`;
                 case 'json':
                     return JSON.stringify({
                         filename: name,
-                        mimeType: currentOutput.mimeType || 'application/octet-stream',
+                        mimeType: mime,
                         size: currentOutput.result.length,
-                        base64: b64.substring(0, 100) + '...',
+                        base64: b64Short,
                         hashes: currentOutput.hashes
                     }, null, 2);
                 default:
@@ -2173,34 +2332,53 @@
         $('#textEncodeMode').onclick = () => { textMode = 'encode'; $('#textEncodeMode').classList.add('active'); $('#textDecodeMode').classList.remove('active'); $('#textInput').placeholder = 'Enter text to encode...'; };
         $('#textDecodeMode').onclick = () => { textMode = 'decode'; $('#textDecodeMode').classList.add('active'); $('#textEncodeMode').classList.remove('active'); $('#textInput').placeholder = 'Enter Base64 to decode...'; };
 
-        $('#textConvertBtn').onclick = () => {
+        function bytesToBase64(bytes) {
+            let binary = '';
+            const chunk = 8192;
+            for (let i = 0; i < bytes.length; i += chunk) {
+                binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+            }
+            return btoa(binary);
+        }
+
+        function textConvert() {
             const input = $('#textInput').value;
-            if (!input) return;
+            if (!input) { $('#textOutput').value = ''; return; }
             try {
                 if (textMode === 'encode') {
                     const format = $('#encodingFormat').value;
                     const bytes = new TextEncoder().encode(input);
                     let result;
                     if (format === 'base64' || format === 'base64url') {
-                        result = btoa(String.fromCharCode(...bytes));
+                        result = bytesToBase64(bytes);
                         if (format === 'base64url') result = result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
                     } else if (format === 'hex') {
                         result = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
                     } else {
-                        result = btoa(String.fromCharCode(...bytes));
+                        result = bytesToBase64(bytes);
                     }
                     if ($('#lineWrap').checked) result = result.match(/.{1,76}/g)?.join('\n') || result;
                     $('#textOutput').value = result;
                 } else {
                     let b64 = input.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
                     while (b64.length % 4) b64 += '=';
-                    const decoded = atob(b64);
-                    $('#textOutput').value = decoded;
+                    const binary = atob(b64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    $('#textOutput').value = new TextDecoder().decode(bytes);
                 }
             } catch (e) {
                 showToast('Conversion failed', 'error');
             }
-        };
+        }
+
+        $('#textConvertBtn').onclick = textConvert;
+
+        let textAutoTimer;
+        $('#textInput').addEventListener('input', () => {
+            clearTimeout(textAutoTimer);
+            textAutoTimer = setTimeout(textConvert, 200);
+        });
 
         $('#textCopyBtn').onclick = () => {
             const text = $('#textOutput').value;
@@ -2433,6 +2611,176 @@
         // INIT
         // ============================================
         renderHistory();
+
+        // ============================================
+        // JWT DECODER
+        // ============================================
+        function decodeJWTPart(b64url) {
+            let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            const decoded = atob(b64);
+            const bytes = new Uint8Array(decoded.length);
+            for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+            return JSON.parse(new TextDecoder().decode(bytes));
+        }
+
+        function renderJWT(token) {
+            const parts = token.trim().split('.');
+            if (parts.length !== 3) {
+                showToast('Invalid JWT: expected 3 parts separated by dots', 'error');
+                return;
+            }
+            try {
+                const header = decodeJWTPart(parts[0]);
+                const payload = decodeJWTPart(parts[1]);
+
+                $('#jwtHeaderBody').textContent = JSON.stringify(header, null, 2);
+
+                const TIME_FIELDS = new Set(['exp', 'iat', 'nbf', 'auth_time', 'updated_at']);
+                let payloadStr = '{\n';
+                const keys = Object.keys(payload);
+                keys.forEach((k, idx) => {
+                    const v = payload[k];
+                    const comma = idx < keys.length - 1 ? ',' : '';
+                    if (TIME_FIELDS.has(k) && typeof v === 'number' && v > 1e9) {
+                        const date = new Date(v * 1000).toLocaleString();
+                        const expiredNote = k === 'exp' && v * 1000 < Date.now() ? ' ⚠ EXPIRED' : '';
+                        payloadStr += `  "${k}": ${v}${comma}  // ${date}${expiredNote}\n`;
+                    } else {
+                        payloadStr += `  "${k}": ${JSON.stringify(v)}${comma}\n`;
+                    }
+                });
+                payloadStr += '}';
+                $('#jwtPayloadBody').textContent = payloadStr;
+
+                const sigHex = [...new Uint8Array(
+                    [...parts[2]].map(c => c.charCodeAt(0))
+                )].map(b => b.toString(16).padStart(2, '0')).join('');
+                $('#jwtSigBody').textContent = `algorithm : ${header.alg || 'unknown'}\nlength    : ${parts[2].length} chars\nbase64url : ${parts[2]}`;
+
+                const infoItems = [];
+                if (header.alg) infoItems.push(`<span>Alg: <strong>${escapeHtml(header.alg)}</strong></span>`);
+                if (header.typ) infoItems.push(`<span>Type: <strong>${escapeHtml(header.typ)}</strong></span>`);
+                const sub = payload.sub || payload.email || payload.username || null;
+                if (sub) infoItems.push(`<span>Subject: <strong>${escapeHtml(String(sub))}</strong></span>`);
+                if (payload.iss) infoItems.push(`<span>Issuer: <strong>${escapeHtml(String(payload.iss))}</strong></span>`);
+                if (payload.exp) {
+                    const expired = payload.exp * 1000 < Date.now();
+                    infoItems.push(`<span>Expiry: <strong class="${expired ? 'jwt-expired' : 'jwt-valid'}">${expired ? 'EXPIRED' : 'Valid'}</strong> — ${new Date(payload.exp * 1000).toLocaleString()}</span>`);
+                }
+                if (payload.iat) infoItems.push(`<span>Issued: ${new Date(payload.iat * 1000).toLocaleString()}</span>`);
+                $('#jwtInfoRow').innerHTML = infoItems.join('') || '<span style="color:var(--text-muted)">No standard claims found</span>';
+                $('#jwtOutput').style.display = 'block';
+            } catch (e) {
+                showToast('Failed to decode JWT: ' + e.message, 'error');
+            }
+        }
+
+        $('#jwtDecodeBtn').onclick = () => {
+            const token = $('#jwtInput').value.trim();
+            if (!token) return;
+            renderJWT(token);
+        };
+
+        $('#jwtPasteBtn').onclick = async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                $('#jwtInput').value = text.trim();
+                renderJWT(text.trim());
+                showToast('Pasted & decoded', 'success');
+            } catch { showToast('Clipboard access denied', 'error'); }
+        };
+
+        $('#jwtClearBtn').onclick = () => {
+            $('#jwtInput').value = '';
+            $('#jwtOutput').style.display = 'none';
+        };
+
+        let jwtAutoTimer;
+        $('#jwtInput').addEventListener('input', () => {
+            clearTimeout(jwtAutoTimer);
+            const val = $('#jwtInput').value.trim();
+            if (!val) { $('#jwtOutput').style.display = 'none'; return; }
+            jwtAutoTimer = setTimeout(() => { if (val.split('.').length === 3) renderJWT(val); }, 400);
+        });
+
+        // ============================================
+        // PEM WRAP / UNWRAP
+        // ============================================
+        $('#pemToggle').onclick = () => {
+            $('#pemContent').classList.toggle('open');
+            $('#pemToggle .chevron').classList.toggle('open');
+        };
+
+        $('#pemWrapBtn').onclick = () => {
+            let b64 = $('#decodeInput').value.trim();
+            if (!b64) return;
+            b64 = b64.replace(/^data:[^,]+,/, '').replace(/\s/g, '');
+            b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            const wrapped = b64.match(/.{1,64}/g)?.join('\n') || b64;
+            const type = $('#pemType').value;
+            $('#pemOutput').value = `-----BEGIN ${type}-----\n${wrapped}\n-----END ${type}-----`;
+            $('#pemContent').classList.add('open');
+            $('#pemToggle .chevron').classList.add('open');
+            showToast('PEM generated', 'success');
+        };
+
+        $('#pemUnwrapBtn').onclick = () => {
+            const input = $('#decodeInput').value.trim();
+            if (!input) return;
+            const stripped = input
+                .replace(/-----BEGIN [^-]+-----/g, '')
+                .replace(/-----END [^-]+-----/g, '')
+                .replace(/\s/g, '');
+            if (!stripped) { showToast('No PEM content found', 'warning'); return; }
+            $('#decodeInput').value = stripped;
+            showToast('PEM headers removed', 'success');
+        };
+
+        $('#copyPemBtn').onclick = () => {
+            const text = $('#pemOutput').value;
+            if (text) { navigator.clipboard.writeText(text); showToast('PEM copied', 'success'); }
+        };
+
+        // ============================================
+        // DEEP LINK HANDLER
+        // ============================================
+        function handleDeepLink() {
+            const params = new URLSearchParams(location.search);
+            const data = params.get('data');
+            const mode = params.get('mode') || 'decode';
+            const format = params.get('format');
+
+            if (format) {
+                const opt = Array.from($('#encodingFormat').options).find(o => o.value === format);
+                if (opt) $('#encodingFormat').value = format;
+            }
+
+            if (!data) return;
+
+            if (mode === 'jwt') {
+                $$('.tab').forEach(t => { if (t.dataset.tab === 'jwt') t.click(); });
+                $('#jwtInput').value = data;
+                renderJWT(data);
+            } else if (mode === 'text') {
+                $$('.tab').forEach(t => { if (t.dataset.tab === 'text') t.click(); });
+                $('#textInput').value = data;
+                textConvert();
+            } else {
+                $$('.tab').forEach(t => { if (t.dataset.tab === 'decode') t.click(); });
+                $('#decodeInput').value = data;
+            }
+
+            showToast('Data loaded from URL — check for sensitive content before sharing links', 'warning');
+        }
+
+        // Register service worker for offline support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+
+        handleDeepLink();
     </script>
 </body>
 </html>
