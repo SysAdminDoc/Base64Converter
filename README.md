@@ -1,6 +1,6 @@
 # Base64 Converter Pro
 
-![Version](https://img.shields.io/badge/version-v0.2.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-HTML%2FJS-lightgrey) ![Offline](https://img.shields.io/badge/offline-PWA-purple)
+![Version](https://img.shields.io/badge/version-v0.3.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-HTML%2FJS-lightgrey) ![Offline](https://img.shields.io/badge/offline-PWA-purple)
 
 A professional, fully client-side Base64 tool. No server. No uploads. Works offline after first load.
 
@@ -11,7 +11,7 @@ A professional, fully client-side Base64 tool. No server. No uploads. Works offl
 ## Features
 
 ### Encoding
-- **Base64** (Standard), **Base64 URL-Safe**, **Base32**, **Hexadecimal**, **ASCII85**
+- **Base64** (Standard), **Base64 URL-Safe**, **Base32**, **Base58 (Bitcoin)**, **Hexadecimal**, **ASCII85**
 - Drag-and-drop files or entire folders — batch encode to ZIP
 - Paste images directly from clipboard (`Ctrl+V`)
 - Fetch a URL and encode it on the spot
@@ -19,16 +19,19 @@ A professional, fully client-side Base64 tool. No server. No uploads. Works offl
 - Image resize before encode (custom width × height)
 - Line-wrap output (76-char MIME / PEM / no-wrap)
 - Split output into chunks for size-limited APIs
+- Auto-format detection on paste (Hex / Base32 / Base58 / Base64URL / Base64 / ASCII85)
 
 ### Decoding
 - Paste any Base64 string — with or without `data:mime;base64,` prefix
 - Auto-detect MIME type from magic bytes
+- Auto-detect encoding format on input
 - Preview decoded images, video, and audio inline
 - Download decoded file with correct extension
 - **PEM wrap/unwrap** — generate `-----BEGIN CERTIFICATE-----` blocks from raw Base64
 
 ### Text
 - Live encode/decode as you type (200 ms debounce)
+- Ctrl+Enter to encode/decode
 - Swap input ↔ output
 - Supports all encoding formats
 
@@ -40,17 +43,20 @@ A professional, fully client-side Base64 tool. No server. No uploads. Works offl
 - Live decode as you type
 
 ### Code Generation
-Outputs ready-to-paste snippets in: **HTML**, **CSS**, **JavaScript**, **TypeScript**, **Python**, **C#**, **PowerShell**, **Go**, **Rust**, **Bash**, **PHP**, **Ruby**, **Kotlin**, **JSON**
+Outputs ready-to-paste snippets in: **HTML**, **CSS**, **JavaScript**, **TypeScript**, **Python**, **C#**, **PowerShell**, **Go**, **Rust**, **Bash**, **PHP**, **Ruby**, **Kotlin**, **JSON**, **curl**, **wget**
 
 ### Other
 - **QR code** from any encoded string
 - **MD5 / SHA-1 / SHA-256** hashes of original file
 - **Compare** two Base64 strings (diff / similarity)
 - **Deep links** — `?data=...&mode=decode|text|jwt&format=base64`
+- **Copy shareable link** — pre-populated decode links
+- **Font-size slider** — adjust output font (11–20px, saved to localStorage)
 - Session stats (files, bytes, speed, ratio)
 - History with localStorage (last 50 conversions)
 - Dark / light theme toggle
 - **Offline PWA** — install to desktop/home screen
+- **Format detection badge** — auto-detect encoding on paste
 
 ---
 
