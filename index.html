@@ -1066,6 +1066,15 @@
             letter-spacing: 0.03em;
         }
         .font-size-control input[type=range] { width: 60px; cursor: pointer; accent-color: var(--accent); }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse-animation {
+            animation: pulse 0.4s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -1474,7 +1483,7 @@
         </div>
 
         <footer>
-            <p>All processing happens locally. No data uploaded. Works offline when installed. &nbsp;·&nbsp; <strong>Base64 Converter Pro v0.2.0</strong></p>
+            <p>All processing happens locally. No data uploaded. Works offline when installed. &nbsp;·&nbsp; <strong>Base64 Converter Pro v0.3.0</strong></p>
         </footer>
     </div>
 
@@ -2158,6 +2167,8 @@
 
         $('#copyCodeBtn').onclick = () => {
             navigator.clipboard.writeText($('#codeOutput').textContent);
+            $('#copyCodeBtn').classList.add('pulse-animation');
+            setTimeout(() => $('#copyCodeBtn').classList.remove('pulse-animation'), 400);
             showToast('Code copied', 'success');
         };
 
@@ -2267,6 +2278,8 @@
             if (!currentOutput) return;
             try {
                 await navigator.clipboard.writeText(currentOutput.result);
+                $('#copyBtn').classList.add('pulse-animation');
+                setTimeout(() => $('#copyBtn').classList.remove('pulse-animation'), 400);
                 showToast('Copied', 'success');
             } catch { showToast('Copy failed', 'error'); }
         };
@@ -2427,6 +2440,14 @@
 
         $('#textConvertBtn').onclick = textConvert;
 
+        // Keyboard support: Ctrl+Enter to convert
+        $('#textInput').addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                textConvert();
+            }
+        });
+
         let textAutoTimer;
         $('#textInput').addEventListener('input', () => {
             clearTimeout(textAutoTimer);
@@ -2435,7 +2456,12 @@
 
         $('#textCopyBtn').onclick = () => {
             const text = $('#textOutput').value;
-            if (text) { navigator.clipboard.writeText(text); showToast('Copied', 'success'); }
+            if (text) {
+                navigator.clipboard.writeText(text);
+                $('#textCopyBtn').classList.add('pulse-animation');
+                setTimeout(() => $('#textCopyBtn').classList.remove('pulse-animation'), 400);
+                showToast('Copied', 'success');
+            }
         };
 
         $('#textSwapBtn').onclick = () => {
@@ -2885,6 +2911,8 @@
             const format = $('#encodingFormat').value;
             const link = `${base}?data=${encodeURIComponent(currentOutput.result)}&mode=decode&format=${format}`;
             navigator.clipboard.writeText(link);
+            $('#copyLinkBtn').classList.add('pulse-animation');
+            setTimeout(() => $('#copyLinkBtn').classList.remove('pulse-animation'), 400);
             showToast('Link copied', 'success');
         };
 
