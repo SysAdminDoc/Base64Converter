@@ -2,6 +2,21 @@
 
 All notable changes to Base64 Converter Pro will be documented in this file.
 
+## [v0.3.0] - 2025-07-10
+
+### Added
+- **Base58 encoding** (Bitcoin alphabet) — new format option in dropdown
+- **curl & wget code snippets** — new tabs for shell command generation
+- **Font-size slider** — adjust output font (11–20px) in header, saved to localStorage, applies to all output areas
+- **Copy shareable link** — button in output section that builds deep-link URL with pre-populated data
+- **Format detection badge** — auto-detects encoding on paste (Hex, Base32, Base58, Base64URL, Base64, ASCII85)
+- **Ctrl+Enter keyboard shortcut** — text panel now converts on Ctrl+Enter key
+- **Copy button pulse animation** — visual feedback on successful copy (code, text, link buttons)
+
+### Fixed
+- Copy button feedback now includes pulse animation for better UX
+- Format detection runs live as user pastes into decode panel
+
 ## [v0.2.0] - 2025-07-09
 
 ### Added
