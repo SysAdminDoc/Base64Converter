@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-T5TDqrnBtO/+BHVKN9cUupOXkrjjQSY9/f5A7NmS1fg=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-vvrODYw4OedbXyEqTOHBRmkDldiJSnnmcARwSjC5O1Q=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1355,7 +1355,11 @@
                                         <button class="btn btn-sm" id="pemUnwrapBtn">Unwrap PEM →</button>
                                     </div>
                                     <textarea class="text-input" id="pemOutput" placeholder="PEM output will appear here..." style="min-height: 100px; margin-top: 0.75rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.75rem;" readonly></textarea>
-                                    <button class="btn btn-sm" style="margin-top: 0.5rem;" id="copyPemBtn">Copy PEM</button>
+                                    <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
+                                        <button class="btn btn-sm" id="copyPemBtn">Copy PEM</button>
+                                        <button class="btn btn-sm" id="parseCertBtn">Parse X.509</button>
+                                    </div>
+                                    <div id="certParseResult" style="display:none; margin-top:0.75rem; padding:0.75rem; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:6px; font-family:'SF Mono', Monaco, monospace; font-size:0.75rem; white-space:pre-wrap; max-height:300px; overflow-y:auto;"></div>
                                 </div>
                             </div>
                         </div>
@@ -3236,6 +3240,132 @@
         $('#copyPemBtn').onclick = () => {
             const text = $('#pemOutput').value;
             if (text) { navigator.clipboard.writeText(text); showToast('PEM copied', 'success'); }
+        };
+
+        // X.509 Certificate Parser (minimal ASN.1 DER)
+        function parseASN1(buf, offset = 0) {
+            const tag = buf[offset];
+            let len = buf[offset + 1], pos = offset + 2;
+            if (len & 0x80) {
+                const numBytes = len & 0x7f;
+                len = 0;
+                for (let i = 0; i < numBytes; i++) len = (len << 8) | buf[pos++];
+            }
+            return { tag, length: len, start: pos, end: pos + len };
+        }
+
+        function parseASN1Children(buf, start, end) {
+            const children = [];
+            let pos = start;
+            while (pos < end) {
+                const node = parseASN1(buf, pos);
+                children.push(node);
+                pos = node.end;
+            }
+            return children;
+        }
+
+        function asn1OID(buf, start, len) {
+            const bytes = buf.slice(start, start + len);
+            const parts = [Math.floor(bytes[0] / 40), bytes[0] % 40];
+            let val = 0;
+            for (let i = 1; i < bytes.length; i++) {
+                val = (val << 7) | (bytes[i] & 0x7f);
+                if (!(bytes[i] & 0x80)) { parts.push(val); val = 0; }
+            }
+            return parts.join('.');
+        }
+
+        function asn1String(buf, start, len) {
+            return new TextDecoder().decode(buf.slice(start, start + len));
+        }
+
+        function parseDN(buf, start, end) {
+            const OID_NAMES = { '2.5.4.3': 'CN', '2.5.4.6': 'C', '2.5.4.7': 'L', '2.5.4.8': 'ST', '2.5.4.10': 'O', '2.5.4.11': 'OU' };
+            const sets = parseASN1Children(buf, start, end);
+            return sets.map(set => {
+                const seq = parseASN1(buf, set.start);
+                const children = parseASN1Children(buf, seq.start, seq.end);
+                if (children.length >= 2) {
+                    const oid = asn1OID(buf, children[0].start, children[0].length);
+                    const val = asn1String(buf, children[1].start, children[1].length);
+                    return (OID_NAMES[oid] || oid) + '=' + val;
+                }
+                return '';
+            }).filter(Boolean).join(', ');
+        }
+
+        function parseSANs(buf, start, end) {
+            const entries = parseASN1Children(buf, start, end);
+            return entries.map(e => {
+                if (e.tag === 0x82) return 'DNS:' + asn1String(buf, e.start, e.length);
+                if (e.tag === 0x87 && e.length === 4) return 'IP:' + Array.from(buf.slice(e.start, e.end)).join('.');
+                return null;
+            }).filter(Boolean);
+        }
+
+        $('#parseCertBtn').onclick = () => {
+            let input = $('#decodeInput').value.trim();
+            if (!input) { showToast('Paste a PEM certificate first', 'warning'); return; }
+            input = input.replace(/-----BEGIN [^-]+-----/g, '').replace(/-----END [^-]+-----/g, '').replace(/\s/g, '');
+            try {
+                const binary = atob(input);
+                const buf = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
+
+                const cert = parseASN1(buf, 0);
+                const tbsCert = parseASN1(buf, cert.start);
+                const tbs = parseASN1Children(buf, tbsCert.start, tbsCert.end);
+
+                let idx = 0;
+                if (tbs[0].tag === 0xa0) idx = 1;
+                const serialNode = tbs[idx];
+                const serial = Array.from(buf.slice(serialNode.start, serialNode.end)).map(b => b.toString(16).padStart(2, '0')).join(':');
+
+                const issuerNode = tbs[idx + 2];
+                const issuer = parseDN(buf, issuerNode.start, issuerNode.end);
+
+                const validityNode = tbs[idx + 3];
+                const validityChildren = parseASN1Children(buf, validityNode.start, validityNode.end);
+                const notBefore = asn1String(buf, validityChildren[0].start, validityChildren[0].length);
+                const notAfter = asn1String(buf, validityChildren[1].start, validityChildren[1].length);
+
+                const subjectNode = tbs[idx + 4];
+                const subject = parseDN(buf, subjectNode.start, subjectNode.end);
+
+                let sans = [];
+                const extsNode = tbs.find(n => n.tag === 0xa3);
+                if (extsNode) {
+                    const extsSeq = parseASN1(buf, extsNode.start);
+                    const exts = parseASN1Children(buf, extsSeq.start, extsSeq.end);
+                    for (const ext of exts) {
+                        const extChildren = parseASN1Children(buf, ext.start, ext.end);
+                        const oid = asn1OID(buf, extChildren[0].start, extChildren[0].length);
+                        if (oid === '2.5.29.17') {
+                            const valueNode = extChildren[extChildren.length - 1];
+                            const inner = parseASN1(buf, valueNode.start);
+                            sans = parseSANs(buf, inner.start, inner.end);
+                        }
+                    }
+                }
+
+                const lines = [
+                    `Subject:    ${subject}`,
+                    `Issuer:     ${issuer}`,
+                    `Serial:     ${serial}`,
+                    `Not Before: ${notBefore}`,
+                    `Not After:  ${notAfter}`,
+                ];
+                if (sans.length) lines.push(`SANs:       ${sans.join(', ')}`);
+
+                $('#certParseResult').textContent = lines.join('\n');
+                $('#certParseResult').style.display = 'block';
+                $('#pemContent').classList.add('open');
+                $('#pemToggle .chevron').classList.add('open');
+            } catch (e) {
+                $('#certParseResult').textContent = 'Failed to parse: ' + e.message;
+                $('#certParseResult').style.display = 'block';
+            }
         };
 
         // ============================================
