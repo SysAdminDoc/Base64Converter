@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-KNNHaHVTn5O2i9qe2w80Sr9TpxJWQ+HrZvE7vJOIgcs=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-rGkxY+EKOakP60dBuDz0tU1YK7J3D5Nbl799iK0Ks2M=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -2269,14 +2269,22 @@
                         ${prog}
                     </div>
                     <div class="file-actions">
-                        ${d.status === 'complete' ? `<button class="btn btn-sm" onclick="showFileOutput('${id}')" title="View"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
-                        <button class="btn btn-sm" onclick="removeFile('${id}')" title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                        ${d.status === 'complete' ? `<button class="btn btn-sm" data-action="view" data-id="${id}" title="View"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+                        <button class="btn btn-sm" data-action="remove" data-id="${id}" title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                     </div>
                 </div>`;
             }).join('');
         }
 
-        window.showFileOutput = function(id) {
+        $('#fileList').addEventListener('click', e => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            if (btn.dataset.action === 'view') showFileOutput(id);
+            else if (btn.dataset.action === 'remove') removeFile(id);
+        });
+
+        function showFileOutput(id) {
             const d = files.get(id);
             if (!d?.result) return;
             currentOutput = { id, result: d.result, rawResult: d.rawResult, fileName: d.file.name, mimeType: d.mimeType, hashes: d.hashes };
@@ -2316,11 +2324,11 @@
             }
         };
 
-        window.removeFile = function(id) {
+        function removeFile(id) {
             files.delete(id);
             if (currentOutput?.id === id) { currentOutput = null; $('#outputSection').style.display = 'none'; }
             renderFileList();
-        };
+        }
 
         // ============================================
         // CODE SNIPPETS
@@ -3004,7 +3012,7 @@
             $('#historyList').innerHTML = history.map(h => {
                 const ext = h.name.split('.').pop()?.toUpperCase().substring(0, 3) || '?';
                 const ago = formatTimeAgo(h.timestamp);
-                return `<div class="history-item" onclick="loadHistoryItem('${h.id}')">
+                return `<div class="history-item" data-history-id="${escapeHtml(h.id)}">
                     <div class="history-icon">${ext}</div>
                     <div class="history-details">
                         <div class="history-name">${escapeHtml(h.name)}</div>
@@ -3022,7 +3030,10 @@
             return `${Math.floor(s / 86400)}d ago`;
         }
 
-        window.loadHistoryItem = function(id) {
+        $('#historyList').addEventListener('click', e => {
+            const item = e.target.closest('[data-history-id]');
+            if (!item) return;
+            const id = item.dataset.historyId;
             const h = loadHistory().find(x => x.id === id);
             if (!h) return;
             currentOutput = { id, result: h.result, fileName: h.name, mimeType: h.type };
@@ -3031,7 +3042,7 @@
             $('#outputSection').style.display = 'block';
             $$('.tab')[0].click();
             showToast('Loaded from history', 'success');
-        };
+        });
 
         $('#clearHistoryBtn').onclick = () => {
             localStorage.removeItem('b64_history');
