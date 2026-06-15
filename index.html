@@ -1196,6 +1196,8 @@
                                     <div class="hash-item"><span class="hash-label">MD5:</span><span class="hash-value" id="hashMd5" title="Click to copy">-</span></div>
                                     <div class="hash-item"><span class="hash-label">SHA-1:</span><span class="hash-value" id="hashSha1" title="Click to copy">-</span></div>
                                     <div class="hash-item"><span class="hash-label">SHA-256:</span><span class="hash-value" id="hashSha256" title="Click to copy">-</span></div>
+                                    <div class="hash-item"><span class="hash-label">SHA-384:</span><span class="hash-value" id="hashSha384" title="Click to copy">-</span></div>
+                                    <div class="hash-item"><span class="hash-label">SHA-512:</span><span class="hash-value" id="hashSha512" title="Click to copy">-</span></div>
                                 </div>
 
                                 <!-- Code Snippet Generator -->
@@ -1292,6 +1294,7 @@
                                     Decode &amp; Download
                                 </button>
                                 <button class="btn" id="previewDecodeBtn">Preview</button>
+                                <button class="btn" id="hexDumpBtn">Hex Dump</button>
                                 <button class="btn" id="validateBtn">Validate &amp; Repair</button>
                                 <button class="btn" id="clearDecodeBtn">Clear</button>
                             </div>
@@ -1302,6 +1305,10 @@
                                 <video class="preview-media" id="decodePreviewVideo" controls style="display: none;"></video>
                                 <audio class="preview-media" id="decodePreviewAudio" controls style="display: none;"></audio>
                                 <div class="file-meta" id="decodeMetaInfo" style="margin-top: 0.5rem;"></div>
+                            </div>
+
+                            <div id="hexDumpContainer" style="display: none; margin-top: 1rem;">
+                                <pre id="hexDumpOutput" style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; overflow-x: auto; max-height: 300px; overflow-y: auto; line-height: 1.4;"></pre>
                             </div>
 
                             <!-- PEM Wrap / Unwrap -->
@@ -1345,7 +1352,18 @@
                             <textarea class="text-input" id="jwtInput" placeholder="Paste a JSON Web Token (header.payload.signature)..." style="min-height: 80px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem;"></textarea>
                             <div class="output-actions" style="margin-top: 0.75rem;">
                                 <button class="btn btn-primary" id="jwtDecodeBtn">Decode</button>
+                                <button class="btn" id="jwtVerifyBtn">Verify Signature</button>
                                 <button class="btn" id="jwtClearBtn">Clear</button>
+                            </div>
+                            <div id="jwtVerifySection" style="display: none; margin-top: 0.75rem;">
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="text" class="settings-input" id="jwtSecretInput" placeholder="HMAC secret (UTF-8 or base64-encoded)" style="flex:1; font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem;">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="jwtSecretBase64">
+                                        <label for="jwtSecretBase64">Base64</label>
+                                    </div>
+                                </div>
+                                <div id="jwtVerifyResult" style="margin-top: 0.5rem; font-size: 0.8rem;"></div>
                             </div>
                             <div id="jwtOutput" style="display: none; margin-top: 1rem;">
                                 <div class="jwt-info-row" id="jwtInfoRow"></div>
@@ -1805,17 +1823,15 @@
         // ============================================
         async function computeHashes(buffer) {
             const hashes = {};
-            // MD5 - simple implementation
             hashes.md5 = await computeMD5(new Uint8Array(buffer));
-            // SHA-1 & SHA-256 via SubtleCrypto
+            const toHex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
             try {
-                const sha1 = await crypto.subtle.digest('SHA-1', buffer);
-                hashes.sha1 = Array.from(new Uint8Array(sha1)).map(b => b.toString(16).padStart(2, '0')).join('');
-                const sha256 = await crypto.subtle.digest('SHA-256', buffer);
-                hashes.sha256 = Array.from(new Uint8Array(sha256)).map(b => b.toString(16).padStart(2, '0')).join('');
+                hashes.sha1 = toHex(await crypto.subtle.digest('SHA-1', buffer));
+                hashes.sha256 = toHex(await crypto.subtle.digest('SHA-256', buffer));
+                hashes.sha384 = toHex(await crypto.subtle.digest('SHA-384', buffer));
+                hashes.sha512 = toHex(await crypto.subtle.digest('SHA-512', buffer));
             } catch (e) {
-                hashes.sha1 = 'N/A';
-                hashes.sha256 = 'N/A';
+                hashes.sha1 = hashes.sha256 = hashes.sha384 = hashes.sha512 = 'N/A';
             }
             return hashes;
         }
@@ -2106,6 +2122,8 @@
                 $('#hashMd5').textContent = d.hashes.md5;
                 $('#hashSha1').textContent = d.hashes.sha1;
                 $('#hashSha256').textContent = d.hashes.sha256;
+                $('#hashSha384').textContent = d.hashes.sha384;
+                $('#hashSha512').textContent = d.hashes.sha512;
                 $('#hashDisplay').style.display = 'block';
             } else {
                 $('#hashDisplay').style.display = 'none';
@@ -2630,6 +2648,36 @@
             }
         };
 
+        $('#hexDumpBtn').onclick = () => {
+            const input = $('#decodeInput').value;
+            if (!input) return;
+            try {
+                const { bytes } = decodeBase64ToBytes(input);
+                const lines = [];
+                const len = Math.min(bytes.length, 4096);
+                for (let i = 0; i < len; i += 16) {
+                    const addr = i.toString(16).padStart(8, '0');
+                    const hexParts = [];
+                    let ascii = '';
+                    for (let j = 0; j < 16; j++) {
+                        if (i + j < len) {
+                            hexParts.push(bytes[i + j].toString(16).padStart(2, '0'));
+                            ascii += (bytes[i + j] >= 32 && bytes[i + j] <= 126) ? String.fromCharCode(bytes[i + j]) : '.';
+                        } else {
+                            hexParts.push('  ');
+                            ascii += ' ';
+                        }
+                    }
+                    lines.push(`${addr}  ${hexParts.slice(0,8).join(' ')}  ${hexParts.slice(8).join(' ')}  |${ascii}|`);
+                }
+                if (bytes.length > 4096) lines.push(`\n... truncated (showing 4096 of ${bytes.length.toLocaleString()} bytes)`);
+                $('#hexDumpOutput').textContent = lines.join('\n');
+                $('#hexDumpContainer').style.display = 'block';
+            } catch (e) {
+                showToast('Invalid Base64', 'error');
+            }
+        };
+
         $('#decodeBtn').onclick = async () => {
             const input = $('#decodeInput').value;
             if (!input) return;
@@ -2905,7 +2953,51 @@
         $('#jwtClearBtn').onclick = () => {
             $('#jwtInput').value = '';
             $('#jwtOutput').style.display = 'none';
+            $('#jwtVerifySection').style.display = 'none';
         };
+
+        $('#jwtVerifyBtn').onclick = () => {
+            $('#jwtVerifySection').style.display = 'block';
+            const secret = $('#jwtSecretInput').value;
+            if (secret) verifyJWT();
+        };
+
+        async function verifyJWT() {
+            const token = $('#jwtInput').value.trim();
+            const secretStr = $('#jwtSecretInput').value;
+            if (!token || !secretStr) return;
+            const parts = token.split('.');
+            if (parts.length !== 3) return;
+            try {
+                const header = decodeJWTPart(parts[0]);
+                const algMap = { HS256: 'SHA-256', HS384: 'SHA-384', HS512: 'SHA-512' };
+                const hashAlg = algMap[header.alg];
+                if (!hashAlg) {
+                    $('#jwtVerifyResult').innerHTML = `<span style="color:var(--warning);">Only HMAC algorithms (HS256/HS384/HS512) supported for verification</span>`;
+                    return;
+                }
+                let keyBytes;
+                if ($('#jwtSecretBase64').checked) {
+                    const b = atob(secretStr);
+                    keyBytes = new Uint8Array(b.length);
+                    for (let i = 0; i < b.length; i++) keyBytes[i] = b.charCodeAt(i);
+                } else {
+                    keyBytes = new TextEncoder().encode(secretStr);
+                }
+                const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: hashAlg }, false, ['sign']);
+                const data = new TextEncoder().encode(parts[0] + '.' + parts[1]);
+                const sig = await crypto.subtle.sign('HMAC', key, data);
+                const computed = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                const valid = computed === parts[2];
+                $('#jwtVerifyResult').innerHTML = valid
+                    ? '<span style="color:var(--success);">&#10003; Signature valid</span>'
+                    : '<span style="color:var(--error);">&#10007; Signature invalid</span>';
+            } catch (e) {
+                $('#jwtVerifyResult').innerHTML = `<span style="color:var(--error);">Verification error: ${escapeHtml(e.message)}</span>`;
+            }
+        }
+
+        $('#jwtSecretInput').addEventListener('input', () => { if ($('#jwtInput').value.trim()) verifyJWT(); });
 
         let jwtAutoTimer;
         $('#jwtInput').addEventListener('input', () => {
