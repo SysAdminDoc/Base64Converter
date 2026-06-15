@@ -10,7 +10,7 @@
     <title>Base64 Converter Pro</title>
     
     <!-- Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js" integrity="sha384-HqC294x+jARmk/wUrzXlnRpiZrmiHJ4BIKph0mrcMJ/cLuMkNDHY0IjbDanCNhcU" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js" integrity="sha384-LY8y+VtUbS9fImcotzWTalRAw5byopZCDOScUS1z4I+AxclTUtlfQtWvbqnK5hDb" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.js" integrity="sha384-VT1EeewTCEXgndcPMQ0PzV+uVFYjxFIjmAA7s5gcMX9t4Dt5TD+OVQIn7NJWIXn7" crossorigin="anonymous"></script>
     
     <style>
@@ -2611,7 +2611,12 @@
                 timestamp: Date.now()
             });
             if (history.length > 50) history.pop();
-            try { localStorage.setItem('b64_history', JSON.stringify(history)); } catch {}
+            let json = JSON.stringify(history);
+            while (json.length > 200000 && history.length > 1) {
+                history.pop();
+                json = JSON.stringify(history);
+            }
+            try { localStorage.setItem('b64_history', json); } catch {}
             renderHistory();
         }
 
@@ -2948,7 +2953,16 @@
 
         // Register service worker for offline support
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(() => {});
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showToast('New version available — reload to update', 'warning');
+                        }
+                    });
+                });
+            }).catch(() => {});
         }
 
         handleDeepLink();

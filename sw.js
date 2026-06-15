@@ -1,4 +1,4 @@
-const CACHE = 'b64pro-v1';
+const CACHE = 'b64pro-v0.3.1';
 const ASSETS = [
   './',
   './index.html',
@@ -23,7 +23,6 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // Only cache same-origin and CDN requests
   if (url.origin !== location.origin && !url.hostname.includes('jsdelivr.net')) return;
 
   e.respondWith(
@@ -38,4 +37,8 @@ self.addEventListener('fetch', e => {
       }).catch(() => cached);
     })
   );
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'skipWaiting') self.skipWaiting();
 });
