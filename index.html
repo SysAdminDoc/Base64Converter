@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-eqhW8vC2N0QT3UqUZLook7w2oBF0KpZTUv1OrCKtyu4=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-KNNHaHVTn5O2i9qe2w80Sr9TpxJWQ+HrZvE7vJOIgcs=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -51,6 +51,8 @@
             --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
             --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+            --focus-ring: 0 0 0 3px rgba(88, 166, 255, 0.25);
+            --drop-zone-hover: rgba(88, 166, 255, 0.05);
         }
 
         [data-theme="light"] {
@@ -72,6 +74,8 @@
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
             --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+            --focus-ring: 0 0 0 3px rgba(9, 105, 218, 0.2);
+            --drop-zone-hover: rgba(9, 105, 218, 0.04);
         }
 
         body {
@@ -141,7 +145,7 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all var(--transition-fast);
             background: var(--bg-tertiary);
             color: var(--text-primary);
             white-space: nowrap;
@@ -298,11 +302,11 @@
         /* Drop Zone */
         .drop-zone {
             border: 2px dashed var(--border-color);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 2.5rem 1.5rem;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all var(--transition-normal);
             background: var(--bg-primary);
             position: relative;
         }
@@ -311,11 +315,11 @@
         .drop-zone:focus-visible,
         .drop-zone.drag-over {
             border-color: var(--accent);
-            background: rgba(88, 166, 255, 0.05);
+            background: var(--drop-zone-hover);
         }
 
         .drop-zone.drag-over {
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+            box-shadow: var(--focus-ring);
         }
 
         .drop-icon {
@@ -358,7 +362,7 @@
         .url-input:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+            box-shadow: var(--focus-ring);
         }
 
         /* File List */
@@ -468,7 +472,7 @@
         .output-textarea:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+            box-shadow: var(--focus-ring);
         }
 
         .output-actions {
@@ -485,7 +489,7 @@
             background: var(--bg-primary);
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: var(--output-font-family);
             font-size: 0.75rem;
         }
 
@@ -557,7 +561,7 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             padding: 0.75rem;
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: var(--output-font-family);
             font-size: var(--output-font-size);
             overflow-x: auto;
             white-space: pre-wrap;
@@ -575,7 +579,7 @@
             border-radius: 6px;
             padding: 0.875rem;
             color: var(--text-primary);
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: var(--output-font-family);
             font-size: var(--output-font-size);
             line-height: 1.5;
             resize: vertical;
@@ -584,7 +588,7 @@
         .text-input:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+            box-shadow: var(--focus-ring);
         }
 
         /* Settings */
@@ -620,7 +624,7 @@
         .settings-select:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+            box-shadow: var(--focus-ring);
         }
 
         .settings-input {
@@ -636,7 +640,7 @@
         .settings-input:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+            box-shadow: var(--focus-ring);
         }
 
         .checkbox-group {
@@ -687,9 +691,8 @@
 
         .stat-label {
             font-size: 0.65rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            letter-spacing: 0.01em;
         }
 
         /* History */
@@ -710,7 +713,7 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all var(--transition-fast);
         }
 
         .history-item:hover {
@@ -767,7 +770,7 @@
             z-index: 1000;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.2s ease;
+            transition: all var(--transition-normal);
             padding: 1rem;
         }
 
@@ -848,7 +851,7 @@
             border-radius: 6px;
             padding: 0.75rem;
             color: var(--text-primary);
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: var(--output-font-family);
             font-size: 0.8rem;
             resize: vertical;
         }
@@ -856,7 +859,7 @@
         .diff-input:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+            box-shadow: var(--focus-ring);
         }
 
         .diff-result {
@@ -889,6 +892,12 @@
             text-align: center;
         }
 
+        .resize-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: var(--focus-ring);
+        }
+
         /* Toast */
         .toast-container {
             position: fixed;
@@ -904,7 +913,6 @@
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow-md);
-            backdrop-filter: blur(8px);
             padding: 0.75rem 1rem;
             border-radius: 8px;
             font-size: 0.85rem;
@@ -912,7 +920,7 @@
             align-items: center;
             gap: 0.5rem;
             transform: translateX(120%);
-            transition: transform 0.3s ease;
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             max-width: 320px;
         }
 
@@ -951,6 +959,24 @@
 
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-muted);
+        }
+
+        /* Skip link */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent);
+            color: white;
+            border-radius: var(--radius-sm);
+            z-index: 1002;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: top var(--transition-fast);
+        }
+        .skip-link:focus {
+            top: 0.5rem;
         }
 
         /* Utility */
@@ -1065,8 +1091,7 @@
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.01em;
         }
         .jwt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .jwt-dot-h { background: var(--accent); }
@@ -1074,7 +1099,7 @@
         .jwt-dot-s { background: var(--warning); }
         .jwt-part-body {
             padding: 0.75rem;
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-family: var(--output-font-family);
             font-size: 0.78rem;
             white-space: pre;
             overflow-x: auto;
@@ -1108,7 +1133,7 @@
             color: var(--text-primary);
             cursor: pointer;
         }
-        .pem-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
+        .pem-select:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 
         /* Font size slider in header */
         .font-size-control {
@@ -1166,7 +1191,7 @@
     </style>
 </head>
 <body>
-    <a href="#main-content" class="visually-hidden" style="position:absolute;top:0;left:0;padding:0.5rem 1rem;background:var(--accent);color:white;z-index:1002;clip:auto;width:auto;height:auto;" onfocus="this.style.position='static'" onblur="this.style.position='absolute'">Skip to content</a>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <div class="app-container">
         <header>
             <div class="logo">
@@ -1401,7 +1426,7 @@
                             </div>
 
                             <div id="hexDumpContainer" style="display: none; margin-top: 1rem;">
-                                <pre id="hexDumpOutput" style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; overflow-x: auto; max-height: 300px; overflow-y: auto; line-height: 1.4;"></pre>
+                                <pre id="hexDumpOutput" style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-family: var(--output-font-family); font-size: 0.7rem; overflow-x: auto; max-height: 300px; overflow-y: auto; line-height: 1.4;"></pre>
                             </div>
 
                             <!-- PEM Wrap / Unwrap -->
@@ -1423,12 +1448,12 @@
                                         <button class="btn btn-sm" id="pemWrapBtn">Wrap → PEM</button>
                                         <button class="btn btn-sm" id="pemUnwrapBtn">Unwrap PEM →</button>
                                     </div>
-                                    <textarea class="text-input" id="pemOutput" placeholder="PEM output will appear here..." style="min-height: 100px; margin-top: 0.75rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.75rem;" readonly></textarea>
+                                    <textarea class="text-input" id="pemOutput" placeholder="PEM output will appear here..." style="min-height: 100px; margin-top: 0.75rem; font-family: var(--output-font-family); font-size: 0.75rem;" readonly></textarea>
                                     <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
                                         <button class="btn btn-sm" id="copyPemBtn">Copy PEM</button>
                                         <button class="btn btn-sm" id="parseCertBtn">Parse X.509</button>
                                     </div>
-                                    <div id="certParseResult" style="display:none; margin-top:0.75rem; padding:0.75rem; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:6px; font-family:'SF Mono', Monaco, monospace; font-size:0.75rem; white-space:pre-wrap; max-height:300px; overflow-y:auto;"></div>
+                                    <div id="certParseResult" style="display:none; margin-top:0.75rem; padding:0.75rem; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:6px; font-family:var(--output-font-family); font-size:0.75rem; white-space:pre-wrap; max-height:300px; overflow-y:auto;"></div>
                                 </div>
                             </div>
                         </div>
@@ -1446,7 +1471,7 @@
                             </button>
                         </div>
                         <div class="card-body">
-                            <textarea class="text-input" id="jwtInput" placeholder="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgN..." style="min-height: 80px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem;"></textarea>
+                            <textarea class="text-input" id="jwtInput" placeholder="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgN..." style="min-height: 80px; font-family: var(--output-font-family); font-size: 0.8rem;"></textarea>
                             <div class="output-actions" style="margin-top: 0.75rem;">
                                 <button class="btn btn-primary" id="jwtDecodeBtn">Decode</button>
                                 <button class="btn" id="jwtVerifyBtn">Verify Signature</button>
@@ -1454,7 +1479,7 @@
                             </div>
                             <div id="jwtVerifySection" style="display: none; margin-top: 0.75rem;">
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <input type="text" class="settings-input" id="jwtSecretInput" placeholder="HMAC secret (UTF-8 or base64-encoded)" style="flex:1; font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem;">
+                                    <input type="text" class="settings-input" id="jwtSecretInput" placeholder="HMAC secret (UTF-8 or base64-encoded)" style="flex:1; font-family: var(--output-font-family); font-size: 0.8rem;">
                                     <div class="checkbox-item">
                                         <input type="checkbox" id="jwtSecretBase64">
                                         <label for="jwtSecretBase64">Base64</label>
@@ -1628,7 +1653,7 @@
         </div>
 
         <footer>
-            <p>100% client-side — your data never leaves the browser &nbsp;·&nbsp; <strong>Base64 Converter Pro</strong> &nbsp;·&nbsp; <span style="color:var(--text-muted);">⌘K to search</span></p>
+            <p>100% client-side — your data never leaves the browser &nbsp;·&nbsp; <strong>Base64 Converter Pro</strong> &nbsp;·&nbsp; <kbd style="font-size:0.7rem;padding:0.1rem 0.35rem;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:3px;" id="shortcutHint">Ctrl+K</kbd></p>
         </footer>
     </div>
 
@@ -3567,6 +3592,8 @@
         }
 
         handleDeepLink();
+
+        if (navigator.platform?.includes('Mac')) $('#shortcutHint').textContent = '⌘K';
     </script>
 </body>
 </html>
