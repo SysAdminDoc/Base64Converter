@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-rGkxY+EKOakP60dBuDz0tU1YK7J3D5Nbl799iK0Ks2M=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-BEtAzfNLGh3ex8yq4PisWUYfN/S7IePfc3STUVQIF6c=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1940,15 +1940,22 @@
         // TABS
         // ============================================
         function switchTab(tab) {
-            $$('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); t.setAttribute('tabindex', '-1'); });
-            tab.classList.add('active');
-            tab.setAttribute('aria-selected', 'true');
-            tab.setAttribute('tabindex', '0');
-            $$('.panel').forEach(p => p.style.display = 'none');
-            const panel = $(`#${tab.dataset.tab}Panel`);
-            panel.style.display = 'block';
-            const focusTarget = panel.querySelector('textarea, input:not([type=hidden]):not([type=checkbox]):not([type=range]), .drop-zone');
-            if (focusTarget) focusTarget.focus();
+            const update = () => {
+                $$('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); t.setAttribute('tabindex', '-1'); });
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+                tab.setAttribute('tabindex', '0');
+                $$('.panel').forEach(p => p.style.display = 'none');
+                const panel = $(`#${tab.dataset.tab}Panel`);
+                panel.style.display = 'block';
+                const focusTarget = panel.querySelector('textarea, input:not([type=hidden]):not([type=checkbox]):not([type=range]), .drop-zone');
+                if (focusTarget) focusTarget.focus();
+            };
+            if (document.startViewTransition) {
+                document.startViewTransition(update);
+            } else {
+                update();
+            }
         }
 
         $$('.tab').forEach((tab, i) => {
@@ -3109,6 +3116,11 @@
                 e.preventDefault();
                 openPalette();
             }
+            if (e.key === '?' && !e.ctrlKey && !e.metaKey && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+                e.preventDefault();
+                openModal($('#paletteModal'));
+                showShortcutHelp();
+            }
         });
 
         // ============================================
@@ -3134,7 +3146,29 @@
             { name: 'Format: URL Encode', action: () => { $('#encodingFormat').value = 'url'; } },
             { name: 'Toggle Compression', action: () => { const c = $('#compressFirst'); c.checked = !c.checked; } },
             { name: 'Toggle Line Wrap', action: () => { const c = $('#lineWrap'); c.checked = !c.checked; } },
+            { name: 'Keyboard Shortcuts', action: () => showShortcutHelp(), key: '?' },
         ];
+
+        function showShortcutHelp() {
+            const shortcuts = [
+                ['Ctrl+K / ⌘K', 'Open command palette'],
+                ['Ctrl+Enter', 'Convert text (Text panel)'],
+                ['Escape', 'Close modal / palette'],
+                ['← → ↑ ↓', 'Navigate between tabs'],
+                ['Home / End', 'First / last tab'],
+                ['Tab / Shift+Tab', 'Cycle within modal'],
+                ['?', 'Show this help'],
+            ];
+            const el = $('#paletteResults');
+            el.innerHTML = shortcuts.map(([key, desc]) =>
+                `<div class="palette-item" style="cursor:default;">
+                    <kbd style="font-size:0.7rem;padding:0.15rem 0.4rem;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:3px;min-width:80px;text-align:center;font-family:inherit;">${escapeHtml(key)}</kbd>
+                    <span>${escapeHtml(desc)}</span>
+                </div>`
+            ).join('');
+            $('#paletteInput').value = '';
+            $('#paletteInput').placeholder = 'Keyboard shortcuts';
+        }
 
         let paletteIdx = 0;
 
@@ -3142,6 +3176,7 @@
             openModal($('#paletteModal'));
             const input = $('#paletteInput');
             input.value = '';
+            input.placeholder = 'Search commands...';
             input.focus();
             renderPalette('');
         }
@@ -3235,6 +3270,14 @@
                     infoItems.push(`<span>Expiry: <strong class="${expired ? 'jwt-expired' : 'jwt-valid'}">${expired ? 'EXPIRED' : 'Valid'}</strong> — ${new Date(payload.exp * 1000).toLocaleString()}</span>`);
                 }
                 if (payload.iat) infoItems.push(`<span>Issued: ${new Date(payload.iat * 1000).toLocaleString()}</span>`);
+
+                const warnings = [];
+                if (!header.alg || header.alg.toLowerCase() === 'none') warnings.push('alg:none — signature bypass attack');
+                if (header.alg === 'HS256' && header.typ === 'JWT') warnings.push('HS256 — weak for production; consider RS256/ES256');
+                if (!payload.exp) warnings.push('No exp claim — token never expires');
+                if (payload.exp && payload.nbf && payload.nbf > payload.exp) warnings.push('nbf > exp — token validity window is impossible');
+                if (warnings.length) infoItems.push(...warnings.map(w => `<span style="color:var(--warning);">⚠ ${escapeHtml(w)}</span>`));
+
                 $('#jwtInfoRow').innerHTML = infoItems.join('') || '<span style="color:var(--text-muted)">No standard claims found</span>';
                 $('#jwtOutput').style.display = 'block';
             } catch (e) {
