@@ -1413,6 +1413,7 @@
                                 <option value="hex">Hexadecimal</option>
                                 <option value="ascii85">ASCII85 (Base85)</option>
                                 <option value="base58">Base58 (Bitcoin)</option>
+                                <option value="base62">Base62 (URL-safe)</option>
                             </select>
                         </div>
                         
@@ -1669,6 +1670,27 @@
                 return result;
             }
 
+            const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            function encodeBase62(uint8) {
+                const digits = [0];
+                for (let i = 0; i < uint8.length; i++) {
+                    let carry = uint8[i];
+                    for (let j = 0; j < digits.length; j++) {
+                        carry += digits[j] << 8;
+                        digits[j] = carry % 62;
+                        carry = Math.floor(carry / 62);
+                    }
+                    while (carry > 0) {
+                        digits.push(carry % 62);
+                        carry = Math.floor(carry / 62);
+                    }
+                }
+                let result = '';
+                for (let i = 0; i < uint8.length && uint8[i] === 0; i++) result += '0';
+                for (let i = digits.length - 1; i >= 0; i--) result += B62[digits[i]];
+                return result;
+            }
+
             self.onmessage = function(e) {
                 const { id, buffer, format } = e.data;
                 try {
@@ -1681,6 +1703,7 @@
                         case 'hex': result = encodeHex(data); break;
                         case 'ascii85': result = encodeAscii85(data); break;
                         case 'base58': result = encodeBase58(data); break;
+                        case 'base62': result = encodeBase62(data); break;
                         default: result = encodeBase64(data, false, report);
                     }
                     self.postMessage({ id, type: 'complete', result, originalSize: data.length, encodedSize: result.length });
