@@ -2959,8 +2959,8 @@
         // ============================================
         function handleDeepLink() {
             const params = new URLSearchParams(location.search);
-            const data = params.get('data');
-            const mode = params.get('mode') || 'decode';
+            const data = params.get('data') || params.get('text') || params.get('url') || '';
+            const mode = params.get('mode') || (data ? 'text' : '');
             const format = params.get('format');
 
             if (format) {

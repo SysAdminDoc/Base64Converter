@@ -21,6 +21,15 @@
       "purpose": "maskable"
     }
   ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "params": {
+      "text": "data",
+      "title": "title",
+      "url": "url"
+    }
+  },
   "categories": ["developer-tools", "utilities"],
   "screenshots": [],
   "shortcuts": [
