@@ -1,4 +1,4 @@
-const CACHE = 'b64pro-v0.3.2';
+const CACHE = 'b64pro-v0.3.3';
 const ASSETS = [
   './',
   './index.html',
@@ -21,8 +21,24 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+
+  if (e.request.method === 'POST' && url.searchParams.has('share')) {
+    e.respondWith((async () => {
+      const formData = await e.request.formData();
+      const file = formData.get('file');
+      if (file) {
+        const cache = await caches.open('b64pro-share');
+        await cache.put('shared-file', new Response(file, {
+          headers: { 'X-Filename': file.name, 'Content-Type': file.type || 'application/octet-stream' }
+        }));
+      }
+      return Response.redirect('./index.html?share=file', 303);
+    })());
+    return;
+  }
+
+  if (e.request.method !== 'GET') return;
   const isCDN = url.hostname.includes('jsdelivr.net');
   if (url.origin !== location.origin && !isCDN) return;
 

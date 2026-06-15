@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-/26/meLS+pFT1thdYZipUGhoURbf9CJHeX00ZoInua8=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-322vOw+KeFyMk9bLztfGnlK20K748a0H+hXDVN6MGt0=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1412,6 +1412,7 @@
                             </div>
                             <div style="display:flex; gap:0.375rem; margin-top:0.5rem; flex-wrap:wrap;">
                                 <button class="btn btn-sm" id="hexDumpBtn">Hex Dump</button>
+                                <button class="btn btn-sm" id="entropyBtn">Entropy</button>
                                 <button class="btn btn-sm" id="deepDecodeBtn">Deep Decode</button>
                                 <button class="btn btn-sm" id="validateBtn">Validate &amp; Repair</button>
                             </div>
@@ -1428,6 +1429,7 @@
                             <div id="hexDumpContainer" style="display: none; margin-top: 1rem;">
                                 <pre id="hexDumpOutput" style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-family: var(--output-font-family); font-size: 0.7rem; overflow-x: auto; max-height: 300px; overflow-y: auto; line-height: 1.4;"></pre>
                             </div>
+                            <div id="entropyResult" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;"></div>
 
                             <!-- PEM Wrap / Unwrap -->
                             <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
@@ -2885,6 +2887,36 @@
             }
         };
 
+        function shannonEntropy(bytes) {
+            const freq = new Array(256).fill(0);
+            for (let i = 0; i < bytes.length; i++) freq[bytes[i]]++;
+            let entropy = 0;
+            for (let i = 0; i < 256; i++) {
+                if (freq[i] === 0) continue;
+                const p = freq[i] / bytes.length;
+                entropy -= p * Math.log2(p);
+            }
+            return entropy;
+        }
+
+        $('#entropyBtn').onclick = () => {
+            const input = $('#decodeInput').value;
+            if (!input) return;
+            try {
+                const { bytes } = decodeBase64ToBytes(input);
+                const entropy = shannonEntropy(bytes);
+                let label, color;
+                if (entropy < 3.5) { label = 'Low — likely plaintext or structured data'; color = 'var(--success)'; }
+                else if (entropy < 5.5) { label = 'Medium — text with some variation'; color = 'var(--text-secondary)'; }
+                else if (entropy < 7.0) { label = 'High — likely compressed data'; color = 'var(--warning)'; }
+                else { label = 'Very high — likely encrypted or random'; color = 'var(--error)'; }
+                $('#entropyResult').innerHTML = `<span style="font-variant-numeric:tabular-nums;"><strong>${entropy.toFixed(4)}</strong> bits/byte</span> <span style="color:${color};margin-left:0.5rem;">${label}</span> <span style="color:var(--text-muted);margin-left:0.5rem;">(${bytes.length.toLocaleString()} bytes analyzed)</span>`;
+                $('#entropyResult').style.display = 'block';
+            } catch (e) {
+                showToast('Invalid Base64', 'error');
+            }
+        };
+
         $('#deepDecodeBtn').onclick = () => {
             let current = $('#decodeInput').value.trim();
             if (!current) return;
@@ -3655,6 +3687,26 @@
         }
 
         handleDeepLink();
+
+        (async () => {
+            const params = new URLSearchParams(location.search);
+            if (params.get('share') === 'file') {
+                try {
+                    const cache = await caches.open('b64pro-share');
+                    const response = await cache.match('shared-file');
+                    if (response) {
+                        const blob = await response.blob();
+                        const name = response.headers.get('X-Filename') || 'shared_file';
+                        const type = response.headers.get('Content-Type') || 'application/octet-stream';
+                        const file = new File([blob], name, { type });
+                        handleFiles([file]);
+                        await cache.delete('shared-file');
+                        history.replaceState(null, '', location.pathname);
+                        showToast('Shared file received', 'success');
+                    }
+                } catch {}
+            }
+        })();
 
         if (navigator.platform?.includes('Mac')) $('#shortcutHint').textContent = '⌘K';
     </script>
