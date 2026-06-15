@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-c+DXsFuInkQ0M1v70MmiA8cMIMcNzHRYn9smqEZ991M=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-eqhW8vC2N0QT3UqUZLook7w2oBF0KpZTUv1OrCKtyu4=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -43,6 +43,14 @@
             --orange: #f0883e;
             --output-font-size: 13px;
             --output-font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.2s ease;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
         }
 
         [data-theme="light"] {
@@ -61,6 +69,9 @@
             --error: #cf222e;
             --purple: #8250df;
             --orange: #bc4c00;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
         }
 
         body {
@@ -69,7 +80,7 @@
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.5;
-            transition: background 0.2s, color 0.2s;
+            transition: background var(--transition-normal), color var(--transition-normal);
         }
 
         .app-container {
@@ -151,10 +162,15 @@
             cursor: not-allowed;
         }
 
+        .btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+
         .btn-primary {
             background: var(--accent);
             border-color: var(--accent);
             color: white;
+            font-weight: 600;
         }
 
         .btn-primary:hover:not(:disabled) {
@@ -205,31 +221,36 @@
             display: flex;
             gap: 0.25rem;
             background: var(--bg-secondary);
-            padding: 0.25rem;
-            border-radius: 8px;
+            padding: 0.3rem;
+            border-radius: var(--radius-md);
             margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
         }
 
         .tab {
             flex: 1;
-            padding: 0.625rem 1rem;
-            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
             font-weight: 500;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all var(--transition-fast);
             background: transparent;
             color: var(--text-secondary);
+            letter-spacing: 0.01em;
         }
 
         .tab:hover {
             color: var(--text-primary);
+            background: var(--bg-tertiary);
         }
 
         .tab.active {
-            background: var(--bg-tertiary);
+            background: var(--bg-primary);
             color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+            font-weight: 600;
         }
 
         /* Main Grid */
@@ -249,8 +270,9 @@
         .card {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
+            border-radius: var(--radius-lg);
             overflow: hidden;
+            box-shadow: var(--shadow-sm);
         }
 
         .card-header {
@@ -258,7 +280,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 0.875rem 1rem;
-            background: var(--bg-tertiary);
+            background: transparent;
             border-bottom: 1px solid var(--border-color);
             gap: 0.5rem;
             flex-wrap: wrap;
@@ -270,14 +292,14 @@
         }
 
         .card-body {
-            padding: 1rem;
+            padding: 1rem 1.125rem;
         }
 
         /* Drop Zone */
         .drop-zone {
             border: 2px dashed var(--border-color);
             border-radius: 8px;
-            padding: 2rem 1.5rem;
+            padding: 2.5rem 1.5rem;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -293,14 +315,15 @@
         }
 
         .drop-zone.drag-over {
-            transform: scale(1.01);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
         }
 
         .drop-icon {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 1rem;
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 0.75rem;
             color: var(--text-muted);
+            opacity: 0.5;
         }
 
         .drop-text {
@@ -335,6 +358,7 @@
         .url-input:focus {
             outline: none;
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
         }
 
         /* File List */
@@ -407,7 +431,7 @@
 
         .progress-bar {
             width: 100%;
-            height: 4px;
+            height: 3px;
             background: var(--bg-tertiary);
             border-radius: 2px;
             overflow: hidden;
@@ -416,8 +440,8 @@
 
         .progress-fill {
             height: 100%;
-            background: var(--accent);
-            transition: width 0.1s ease;
+            background: linear-gradient(90deg, var(--accent), var(--purple));
+            transition: width 0.2s ease;
         }
 
         /* Output Section */
@@ -444,6 +468,7 @@
         .output-textarea:focus {
             outline: none;
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
         }
 
         .output-actions {
@@ -503,26 +528,28 @@
         }
 
         .code-tab {
-            padding: 0.375rem 0.75rem;
+            padding: 0.3rem 0.625rem;
             min-height: 24px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 500;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            transition: all 0.15s ease;
+            background: transparent;
+            color: var(--text-muted);
+            transition: all var(--transition-fast);
         }
 
         .code-tab:hover {
             color: var(--text-primary);
+            background: var(--bg-tertiary);
         }
 
         .code-tab.active {
             background: var(--accent);
             border-color: var(--accent);
             color: white;
+            font-weight: 600;
         }
 
         .code-output {
@@ -557,6 +584,7 @@
         .text-input:focus {
             outline: none;
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
         }
 
         /* Settings */
@@ -573,8 +601,8 @@
             font-size: 0.75rem;
             font-weight: 600;
             color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            text-transform: none;
+            letter-spacing: 0.01em;
             margin-bottom: 0.5rem;
         }
 
@@ -592,6 +620,7 @@
         .settings-select:focus {
             outline: none;
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
         }
 
         .settings-input {
@@ -607,6 +636,7 @@
         .settings-input:focus {
             outline: none;
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
         }
 
         .checkbox-group {
@@ -652,6 +682,7 @@
             font-size: 1.1rem;
             font-weight: 600;
             color: var(--accent);
+            font-variant-numeric: tabular-nums;
         }
 
         .stat-label {
@@ -684,6 +715,7 @@
 
         .history-item:hover {
             border-color: var(--text-muted);
+            box-shadow: var(--shadow-sm);
         }
 
         .history-icon {
@@ -727,7 +759,8 @@
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -746,17 +779,20 @@
         .modal {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             max-width: 500px;
             width: 100%;
-            max-height: 90vh;
+            max-height: 85vh;
             overflow-y: auto;
-            transform: scale(0.95);
-            transition: transform 0.2s ease;
+            transform: scale(0.97) translateY(8px);
+            transition: transform var(--transition-normal), opacity var(--transition-normal);
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
         }
 
         .modal-overlay.visible .modal {
-            transform: scale(1);
+            transform: scale(1) translateY(0);
+            opacity: 1;
         }
 
         .modal-header {
@@ -817,6 +853,12 @@
             resize: vertical;
         }
 
+        .diff-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+        }
+
         .diff-result {
             margin-top: 1rem;
             padding: 1rem;
@@ -861,6 +903,8 @@
         .toast {
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(8px);
             padding: 0.75rem 1rem;
             border-radius: 8px;
             font-size: 0.85rem;
@@ -873,9 +917,9 @@
         }
 
         .toast.visible { transform: translateX(0); }
-        .toast.success { border-color: var(--success); }
-        .toast.error { border-color: var(--error); }
-        .toast.warning { border-color: var(--warning); }
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--error); }
+        .toast.warning { border-left: 3px solid var(--warning); }
 
         /* Preview */
         .preview-container {
@@ -925,12 +969,13 @@
         .badge {
             display: inline-flex;
             align-items: center;
-            padding: 0.125rem 0.5rem;
-            font-size: 0.7rem;
-            font-weight: 500;
+            padding: 0.15rem 0.5rem;
+            font-size: 0.65rem;
+            font-weight: 600;
             border-radius: 10px;
             background: var(--bg-tertiary);
             color: var(--text-secondary);
+            letter-spacing: 0.02em;
         }
 
         .badge-success {
@@ -957,9 +1002,10 @@
 
         footer {
             text-align: center;
-            padding: 2rem 1rem 1rem;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
+            padding: 2.5rem 1rem 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            letter-spacing: 0.01em;
         }
 
         .collapsible-header {
@@ -973,11 +1019,11 @@
         .collapsible-content {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease;
+            transition: max-height 0.25s ease-out;
         }
 
         .collapsible-content.open {
-            max-height: 500px;
+            max-height: 600px;
         }
 
         .chevron {
@@ -1062,19 +1108,24 @@
             color: var(--text-primary);
             cursor: pointer;
         }
-        .pem-select:focus { outline: none; border-color: var(--accent); }
+        .pem-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
 
         /* Font size slider in header */
         .font-size-control {
             display: flex;
             align-items: center;
-            gap: 0.35rem;
+            gap: 0.375rem;
             font-size: 0.7rem;
             color: var(--text-muted);
             user-select: none;
             letter-spacing: 0.03em;
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            cursor: default;
         }
-        .font-size-control input[type=range] { width: 60px; cursor: pointer; accent-color: var(--accent); }
+        .font-size-control input[type=range] { width: 52px; cursor: pointer; accent-color: var(--accent); }
 
         /* Animations */
         @keyframes pulse {
@@ -1104,6 +1155,13 @@
             background: var(--bg-tertiary);
             padding: 0.125rem 0.375rem;
             border-radius: 3px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
@@ -1164,13 +1222,13 @@
                                 <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                                 </svg>
-                                <p class="drop-text">Drop files or folders here</p>
-                                <p class="drop-hint">Paste images with Ctrl+V • Click to browse</p>
+                                <p class="drop-text">Drop files here to encode</p>
+                                <p class="drop-hint">or click to browse &nbsp;·&nbsp; Ctrl+V to paste images</p>
                             </div>
                             <input type="file" id="fileInput" class="visually-hidden" multiple>
 
                             <div class="url-input-group">
-                                <input type="url" class="url-input" id="urlInput" placeholder="Or enter URL to fetch...">
+                                <input type="url" class="url-input" id="urlInput" placeholder="https://example.com/file.png">
                                 <button class="btn btn-sm" id="fetchUrlBtn">Fetch</button>
                             </div>
 
@@ -1314,7 +1372,7 @@
                             </button>
                         </div>
                         <div class="card-body">
-                            <textarea class="text-input" id="decodeInput" placeholder="Paste Base64 string here (with or without data URI prefix)..."></textarea>
+                            <textarea class="text-input" id="decodeInput" placeholder="Paste a Base64 string, data URI, or PEM block..."></textarea>
                             <div id="formatDetectBadge" style="display:none; margin-top: 0.4rem; font-size: 0.72rem; color: var(--text-muted);">
                                 Detected: <span id="formatDetectLabel" style="color: var(--accent); font-weight: 600;"></span>
                             </div>
@@ -1325,10 +1383,12 @@
                                     Decode &amp; Download
                                 </button>
                                 <button class="btn" id="previewDecodeBtn">Preview</button>
-                                <button class="btn" id="hexDumpBtn">Hex Dump</button>
-                                <button class="btn" id="deepDecodeBtn">Deep Decode</button>
-                                <button class="btn" id="validateBtn">Validate &amp; Repair</button>
                                 <button class="btn" id="clearDecodeBtn">Clear</button>
+                            </div>
+                            <div style="display:flex; gap:0.375rem; margin-top:0.5rem; flex-wrap:wrap;">
+                                <button class="btn btn-sm" id="hexDumpBtn">Hex Dump</button>
+                                <button class="btn btn-sm" id="deepDecodeBtn">Deep Decode</button>
+                                <button class="btn btn-sm" id="validateBtn">Validate &amp; Repair</button>
                             </div>
                             <div id="validateResult" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;"></div>
                             <div id="deepDecodeResult" style="display: none; margin-top: 0.75rem;"></div>
@@ -1386,7 +1446,7 @@
                             </button>
                         </div>
                         <div class="card-body">
-                            <textarea class="text-input" id="jwtInput" placeholder="Paste a JSON Web Token (header.payload.signature)..." style="min-height: 80px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem;"></textarea>
+                            <textarea class="text-input" id="jwtInput" placeholder="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgN..." style="min-height: 80px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem;"></textarea>
                             <div class="output-actions" style="margin-top: 0.75rem;">
                                 <button class="btn btn-primary" id="jwtDecodeBtn">Decode</button>
                                 <button class="btn" id="jwtVerifyBtn">Verify Signature</button>
@@ -1534,15 +1594,15 @@
                                 <div class="stat-label">Files</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-value" id="statBytes">0</div>
+                                <div class="stat-value" id="statBytes">0 B</div>
                                 <div class="stat-label">Processed</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-value" id="statSpeed">-</div>
+                                <div class="stat-value" id="statSpeed">—</div>
                                 <div class="stat-label">Avg Speed</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-value" id="statRatio">-</div>
+                                <div class="stat-value" id="statRatio">—</div>
                                 <div class="stat-label">Size Ratio</div>
                             </div>
                         </div>
@@ -1557,7 +1617,10 @@
                     </div>
                     <div class="card-body">
                         <div class="history-list" id="historyList">
-                            <div class="history-empty">No history yet</div>
+                            <div class="history-empty">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.5rem;opacity:0.4;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <div>Conversions will appear here</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1565,7 +1628,7 @@
         </div>
 
         <footer>
-            <p>All processing happens locally. No data uploaded. Works offline when installed. &nbsp;·&nbsp; <strong>Base64 Converter Pro v0.3.0</strong></p>
+            <p>100% client-side — your data never leaves the browser &nbsp;·&nbsp; <strong>Base64 Converter Pro</strong> &nbsp;·&nbsp; <span style="color:var(--text-muted);">⌘K to search</span></p>
         </footer>
     </div>
 
@@ -1618,7 +1681,7 @@
     <div class="modal-overlay" id="paletteModal">
         <div class="modal" style="max-width: 480px; margin-top: 10vh;">
             <div class="modal-body" style="padding: 0;">
-                <input type="text" id="paletteInput" placeholder="Type a command..." style="width: 100%; padding: 0.875rem 1rem; font-size: 0.95rem; background: var(--bg-secondary); border: none; border-bottom: 1px solid var(--border-color); color: var(--text-primary); outline: none; border-radius: 12px 12px 0 0;">
+                <input type="text" id="paletteInput" placeholder="Search commands..." style="width: 100%; padding: 1rem 1.25rem; font-size: 0.9rem; background: var(--bg-secondary); border: none; border-bottom: 1px solid var(--border-color); color: var(--text-primary); outline: none; border-radius: 12px 12px 0 0; font-family: inherit;">
                 <div id="paletteResults" style="max-height: 300px; overflow-y: auto; padding: 0.25rem;"></div>
             </div>
         </div>
@@ -1811,9 +1874,10 @@
         }
 
         function showToast(msg, type = 'info') {
+            const icons = { success: '✓', error: '✗', warning: '⚠', info: 'ℹ' };
             const t = document.createElement('div');
             t.className = 'toast ' + type;
-            t.textContent = msg;
+            t.innerHTML = `<span style="font-size:0.9rem;flex-shrink:0;">${icons[type] || icons.info}</span> ${escapeHtml(msg)}`;
             $('#toastContainer').appendChild(t);
             requestAnimationFrame(() => t.classList.add('visible'));
             setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 300); }, 3000);
@@ -2909,7 +2973,7 @@
         function renderHistory() {
             const history = loadHistory();
             if (history.length === 0) {
-                $('#historyList').innerHTML = '<div class="history-empty">No history yet</div>';
+                $('#historyList').innerHTML = '<div class="history-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.5rem;opacity:0.4;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Conversions will appear here</div></div>';
                 return;
             }
             $('#historyList').innerHTML = history.map(h => {
