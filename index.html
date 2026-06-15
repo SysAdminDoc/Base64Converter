@@ -10,8 +10,8 @@
     <title>Base64 Converter Pro</title>
     
     <!-- Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js" integrity="sha384-HqC294x+jARmk/wUrzXlnRpiZrmiHJ4BIKph0mrcMJ/cLuMkNDHY0IjbDanCNhcU" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.js" integrity="sha384-VT1EeewTCEXgndcPMQ0PzV+uVFYjxFIjmAA7s5gcMX9t4Dt5TD+OVQIn7NJWIXn7" crossorigin="anonymous"></script>
     
     <style>
         *, *::before, *::after {
@@ -2376,11 +2376,11 @@
             QRCode.toCanvas(qrData, { width: 200, margin: 2 }, (err, canvas) => {
                 if (!err) container.appendChild(canvas);
             });
-            $('#qrModal').classList.add('visible');
+            openModal($('#qrModal'));
         };
 
-        $('#closeQrModal').onclick = () => $('#qrModal').classList.remove('visible');
-        $('#qrModal').onclick = e => { if (e.target === $('#qrModal')) $('#qrModal').classList.remove('visible'); };
+        $('#closeQrModal').onclick = () => closeModal($('#qrModal'));
+        $('#qrModal').onclick = e => { if (e.target === $('#qrModal')) closeModal($('#qrModal')); };
         $('#downloadQrBtn').onclick = () => {
             const canvas = $('#qrContainer canvas');
             if (!canvas) return;
@@ -2566,9 +2566,9 @@
         // ============================================
         // DIFF TOOL
         // ============================================
-        $('#diffToggle').onclick = () => $('#diffModal').classList.add('visible');
-        $('#closeDiffModal').onclick = () => $('#diffModal').classList.remove('visible');
-        $('#diffModal').onclick = e => { if (e.target === $('#diffModal')) $('#diffModal').classList.remove('visible'); };
+        $('#diffToggle').onclick = () => openModal($('#diffModal'));
+        $('#closeDiffModal').onclick = () => closeModal($('#diffModal'));
+        $('#diffModal').onclick = e => { if (e.target === $('#diffModal')) closeModal($('#diffModal')); };
 
         $('#runDiffBtn').onclick = () => {
             const a = $('#diffInputA').value.replace(/\s/g, '');
@@ -2678,11 +2678,41 @@
         };
 
         // ============================================
+        // MODAL FOCUS TRAP
+        // ============================================
+        let modalTrigger = null;
+
+        function openModal(overlay) {
+            modalTrigger = document.activeElement;
+            overlay.classList.add('visible');
+            const focusable = overlay.querySelectorAll('button, textarea, input, [tabindex]:not([tabindex="-1"])');
+            if (focusable.length) focusable[0].focus();
+        }
+
+        function closeModal(overlay) {
+            overlay.classList.remove('visible');
+            if (modalTrigger) { modalTrigger.focus(); modalTrigger = null; }
+        }
+
+        function trapFocus(e) {
+            const overlay = document.querySelector('.modal-overlay.visible');
+            if (!overlay || e.key !== 'Tab') return;
+            const focusable = [...overlay.querySelectorAll('button, textarea, input, [tabindex]:not([tabindex="-1"])')];
+            if (!focusable.length) return;
+            const first = focusable[0], last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+
+        document.addEventListener('keydown', trapFocus);
+
+        // ============================================
         // KEYBOARD SHORTCUTS
         // ============================================
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
-                $$('.modal-overlay.visible').forEach(m => m.classList.remove('visible'));
+                const overlay = document.querySelector('.modal-overlay.visible');
+                if (overlay) closeModal(overlay);
             }
         });
 
