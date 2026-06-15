@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-q84ZsI0Z683MKyW+7/bpyBgwuldrQADQfUXLqcRaiuY=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-c+DXsFuInkQ0M1v70MmiA8cMIMcNzHRYn9smqEZ991M=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1254,6 +1254,7 @@
                                             <button class="code-tab" data-lang="json">JSON</button>
                                             <button class="code-tab" data-lang="curl">curl</button>
                                             <button class="code-tab" data-lang="wget">wget</button>
+                                            <button class="code-tab" data-lang="wasm">WASM</button>
                                         </div>
                                         <div class="code-output" id="codeOutput"></div>
                                         <button class="btn btn-sm" style="margin-top: 0.5rem;" id="copyCodeBtn">Copy Code</button>
@@ -2285,6 +2286,8 @@
                     return `curl -X POST https://example.com/upload \\\n  -H "Content-Type: application/octet-stream" \\\n  -d "@-" << 'EOF'\n${b64Short}\nEOF`;
                 case 'wget':
                     return `wget --post-data="${b64Short}" \\\n  --header="Content-Type: application/octet-stream" \\\n  --output-document="${name}" \\\n  https://example.com/decode`;
+                case 'wasm':
+                    return `// Decode Base64 to WASM and instantiate on load\nconst b64 = '${b64Short}';\nconst binary = atob(b64);\nconst bytes = new Uint8Array(binary.length);\nfor (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);\nconst { instance } = await WebAssembly.instantiate(bytes);\nconsole.log('WASM exports:', Object.keys(instance.exports));`;
                 default:
                     return b64;
             }
