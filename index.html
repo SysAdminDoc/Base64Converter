@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-kM8AwZuJ6JVC5jCWmJdBYDZvdqV9imj4KoxzCqCWcrA=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-T5TDqrnBtO/+BHVKN9cUupOXkrjjQSY9/f5A7NmS1fg=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1083,6 +1083,27 @@
         .pulse-animation {
             animation: pulse 0.4s ease-in-out;
         }
+        .palette-item {
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.1s;
+        }
+        .palette-item:hover, .palette-item.selected {
+            background: var(--bg-hover);
+        }
+        .palette-item .palette-key {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-left: auto;
+            background: var(--bg-tertiary);
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
@@ -1417,6 +1438,7 @@
                                 <option value="ascii85">ASCII85 (Base85)</option>
                                 <option value="base58">Base58 (Bitcoin)</option>
                                 <option value="base62">Base62 (URL-safe)</option>
+                                <option value="url">URL Encode</option>
                             </select>
                         </div>
                         
@@ -1575,6 +1597,16 @@
                 <div class="diff-result" id="diffResult" style="display: none;">
                     <div class="file-meta" id="diffStats"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Palette -->
+    <div class="modal-overlay" id="paletteModal">
+        <div class="modal" style="max-width: 480px; margin-top: 10vh;">
+            <div class="modal-body" style="padding: 0;">
+                <input type="text" id="paletteInput" placeholder="Type a command..." style="width: 100%; padding: 0.875rem 1rem; font-size: 0.95rem; background: var(--bg-secondary); border: none; border-bottom: 1px solid var(--border-color); color: var(--text-primary); outline: none; border-radius: 12px 12px 0 0;">
+                <div id="paletteResults" style="max-height: 300px; overflow-y: auto; padding: 0.25rem;"></div>
             </div>
         </div>
     </div>
@@ -2503,8 +2535,11 @@
         }
 
         function convertSingleLine(line) {
+            const format = $('#encodingFormat').value;
+            if (format === 'url') {
+                return textMode === 'encode' ? encodeURIComponent(line) : decodeURIComponent(line);
+            }
             if (textMode === 'encode') {
-                const format = $('#encodingFormat').value;
                 const bytes = new TextEncoder().encode(line);
                 let result;
                 if (format === 'base64' || format === 'base64url') {
@@ -2955,6 +2990,72 @@
                 const overlay = document.querySelector('.modal-overlay.visible');
                 if (overlay) closeModal(overlay);
             }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                openPalette();
+            }
+        });
+
+        // ============================================
+        // COMMAND PALETTE
+        // ============================================
+        const paletteCommands = [
+            { name: 'File Encode', action: () => switchTab($('#tab-encode')), key: '1' },
+            { name: 'Text Encode/Decode', action: () => switchTab($('#tab-text')), key: '2' },
+            { name: 'Decode Base64', action: () => switchTab($('#tab-decode')), key: '3' },
+            { name: 'JWT Decoder', action: () => switchTab($('#tab-jwt')), key: '4' },
+            { name: 'Toggle Theme', action: () => toggleTheme(), key: 'T' },
+            { name: 'Compare / Diff', action: () => openModal($('#diffModal')) },
+            { name: 'QR Code', action: () => { if (currentOutput) $('#qrBtn').click(); } },
+            { name: 'Clear All Files', action: () => $('#clearAllBtn').click() },
+            { name: 'Clear History', action: () => $('#clearHistoryBtn').click() },
+            { name: 'Format: Base64', action: () => { $('#encodingFormat').value = 'base64'; } },
+            { name: 'Format: Base64 URL-Safe', action: () => { $('#encodingFormat').value = 'base64url'; } },
+            { name: 'Format: Base32', action: () => { $('#encodingFormat').value = 'base32'; } },
+            { name: 'Format: Hex', action: () => { $('#encodingFormat').value = 'hex'; } },
+            { name: 'Format: ASCII85', action: () => { $('#encodingFormat').value = 'ascii85'; } },
+            { name: 'Format: Base58', action: () => { $('#encodingFormat').value = 'base58'; } },
+            { name: 'Format: Base62', action: () => { $('#encodingFormat').value = 'base62'; } },
+            { name: 'Format: URL Encode', action: () => { $('#encodingFormat').value = 'url'; } },
+            { name: 'Toggle Compression', action: () => { const c = $('#compressFirst'); c.checked = !c.checked; } },
+            { name: 'Toggle Line Wrap', action: () => { const c = $('#lineWrap'); c.checked = !c.checked; } },
+        ];
+
+        let paletteIdx = 0;
+
+        function openPalette() {
+            openModal($('#paletteModal'));
+            const input = $('#paletteInput');
+            input.value = '';
+            input.focus();
+            renderPalette('');
+        }
+
+        function renderPalette(query) {
+            const q = query.toLowerCase();
+            const filtered = q ? paletteCommands.filter(c => c.name.toLowerCase().includes(q)) : paletteCommands;
+            paletteIdx = 0;
+            $('#paletteResults').innerHTML = filtered.map((c, i) =>
+                `<div class="palette-item${i === 0 ? ' selected' : ''}" data-idx="${i}">
+                    <span>${escapeHtml(c.name)}</span>
+                    ${c.key ? `<span class="palette-key">${c.key}</span>` : ''}
+                </div>`
+            ).join('') || '<div style="padding:1rem;color:var(--text-muted);text-align:center;">No commands found</div>';
+            $('#paletteResults').querySelectorAll('.palette-item').forEach((el, i) => {
+                el.onclick = () => { filtered[i].action(); closeModal($('#paletteModal')); };
+            });
+        }
+
+        $('#paletteInput').addEventListener('input', e => renderPalette(e.target.value));
+        $('#paletteInput').addEventListener('keydown', e => {
+            const items = [...$('#paletteResults').querySelectorAll('.palette-item')];
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); paletteIdx = Math.min(paletteIdx + 1, items.length - 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); paletteIdx = Math.max(paletteIdx - 1, 0); }
+            else if (e.key === 'Enter') { e.preventDefault(); items[paletteIdx]?.click(); return; }
+            else return;
+            items.forEach((el, i) => el.classList.toggle('selected', i === paletteIdx));
+            items[paletteIdx]?.scrollIntoView({ block: 'nearest' });
         });
 
         // ============================================
