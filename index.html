@@ -7,6 +7,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
+    <meta property="og:title" content="Base64 Converter Pro">
+    <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sysadmindoc.github.io/Base64Converter/">
     <title>Base64 Converter Pro</title>
     
     <!-- Libraries -->
@@ -476,6 +480,8 @@
         .hash-value {
             word-break: break-all;
             cursor: pointer;
+            min-height: 24px;
+            display: inline-block;
         }
 
         .hash-value:hover {
@@ -496,6 +502,7 @@
 
         .code-tab {
             padding: 0.375rem 0.75rem;
+            min-height: 24px;
             font-size: 0.75rem;
             font-weight: 500;
             border: 1px solid var(--border-color);
@@ -1078,6 +1085,7 @@
     </style>
 </head>
 <body>
+    <a href="#main-content" class="visually-hidden" style="position:absolute;top:0;left:0;padding:0.5rem 1rem;background:var(--accent);color:white;z-index:1002;clip:auto;width:auto;height:auto;" onfocus="this.style.position='static'" onblur="this.style.position='absolute'">Skip to content</a>
     <div class="app-container">
         <header>
             <div class="logo">
@@ -1085,34 +1093,34 @@
                 <h1>Base64 Converter Pro</h1>
             </div>
             <div class="header-actions">
-                <button class="btn btn-sm" id="installBtn" style="display: none;" title="Install as app">
+                <button class="btn btn-sm" id="installBtn" style="display: none;" title="Install as app" aria-label="Install as app">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
                 <label class="font-size-control" title="Output font size">
-                    <span>Aa</span>
-                    <input type="range" id="fontSizeSlider" min="11" max="20" step="1" value="13" title="Output font size">
+                    <span aria-hidden="true">Aa</span>
+                    <input type="range" id="fontSizeSlider" min="11" max="20" step="1" value="13" aria-label="Output font size">
                 </label>
-                <button class="btn btn-icon" id="diffToggle" title="Compare Base64 strings">
+                <button class="btn btn-icon" id="diffToggle" title="Compare Base64 strings" aria-label="Compare Base64 strings">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 </button>
-                <button class="btn btn-icon" id="themeToggle" title="Toggle theme">
+                <button class="btn btn-icon" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 </button>
             </div>
         </header>
 
         <!-- Mode Tabs -->
-        <div class="tabs" role="tablist">
-            <button class="tab active" role="tab" aria-selected="true" data-tab="encode">File Encode</button>
-            <button class="tab" role="tab" aria-selected="false" data-tab="text">Text</button>
-            <button class="tab" role="tab" aria-selected="false" data-tab="decode">Decode</button>
-            <button class="tab" role="tab" aria-selected="false" data-tab="jwt">JWT</button>
+        <div class="tabs" role="tablist" aria-label="Converter mode">
+            <button class="tab active" role="tab" aria-selected="true" data-tab="encode" id="tab-encode" aria-controls="encodePanel">File Encode</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="text" id="tab-text" aria-controls="textPanel">Text</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="decode" id="tab-decode" aria-controls="decodePanel">Decode</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="jwt" id="tab-jwt" aria-controls="jwtPanel">JWT</button>
         </div>
 
         <div class="main-grid">
-            <main>
+            <main id="main-content">
                 <!-- ============ FILE ENCODE PANEL ============ -->
-                <div id="encodePanel" class="panel">
+                <div id="encodePanel" class="panel" role="tabpanel" aria-labelledby="tab-encode">
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">Input Files</span>
@@ -1225,7 +1233,7 @@
                 </div>
 
                 <!-- ============ TEXT PANEL ============ -->
-                <div id="textPanel" class="panel" style="display: none;">
+                <div id="textPanel" class="panel" role="tabpanel" aria-labelledby="tab-text" style="display: none;">
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">Text to Base64</span>
@@ -1259,7 +1267,7 @@
                 </div>
 
                 <!-- ============ DECODE PANEL ============ -->
-                <div id="decodePanel" class="panel" style="display: none;">
+                <div id="decodePanel" class="panel" role="tabpanel" aria-labelledby="tab-decode" style="display: none;">
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">Base64 to File</span>
@@ -1318,7 +1326,7 @@
                 </div>
 
                 <!-- ============ JWT PANEL ============ -->
-                <div id="jwtPanel" class="panel" style="display: none;">
+                <div id="jwtPanel" class="panel" role="tabpanel" aria-labelledby="tab-jwt" style="display: none;">
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">JWT Decoder</span>
@@ -1757,14 +1765,33 @@
         // ============================================
         // TABS
         // ============================================
-        $$('.tab').forEach(tab => {
-            tab.onclick = () => {
-                $$('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
-                tab.classList.add('active');
-                tab.setAttribute('aria-selected', 'true');
-                $$('.panel').forEach(p => p.style.display = 'none');
-                $(`#${tab.dataset.tab}Panel`).style.display = 'block';
-            };
+        function switchTab(tab) {
+            $$('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); t.setAttribute('tabindex', '-1'); });
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+            tab.setAttribute('tabindex', '0');
+            $$('.panel').forEach(p => p.style.display = 'none');
+            const panel = $(`#${tab.dataset.tab}Panel`);
+            panel.style.display = 'block';
+            const focusTarget = panel.querySelector('textarea, input:not([type=hidden]):not([type=checkbox]):not([type=range]), .drop-zone');
+            if (focusTarget) focusTarget.focus();
+        }
+
+        $$('.tab').forEach((tab, i) => {
+            tab.setAttribute('tabindex', i === 0 ? '0' : '-1');
+            tab.onclick = () => switchTab(tab);
+        });
+
+        $('.tabs').addEventListener('keydown', e => {
+            const tabs = [...$$('.tab')];
+            const idx = tabs.indexOf(document.activeElement);
+            if (idx < 0) return;
+            let next = -1;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (idx + 1) % tabs.length;
+            else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (idx - 1 + tabs.length) % tabs.length;
+            else if (e.key === 'Home') next = 0;
+            else if (e.key === 'End') next = tabs.length - 1;
+            if (next >= 0) { e.preventDefault(); tabs[next].focus(); switchTab(tabs[next]); }
         });
 
         // ============================================
