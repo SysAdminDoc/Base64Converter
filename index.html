@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-BEtAzfNLGh3ex8yq4PisWUYfN/S7IePfc3STUVQIF6c=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-/26/meLS+pFT1thdYZipUGhoURbf9CJHeX00ZoInua8=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -16,7 +16,7 @@
     
     <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js" integrity="sha384-LY8y+VtUbS9fImcotzWTalRAw5byopZCDOScUS1z4I+AxclTUtlfQtWvbqnK5hDb" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.js" integrity="sha384-VT1EeewTCEXgndcPMQ0PzV+uVFYjxFIjmAA7s5gcMX9t4Dt5TD+OVQIn7NJWIXn7" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" integrity="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k" crossorigin="anonymous"></script>
     
     <style>
         *, *::before, *::after {
@@ -2619,19 +2619,28 @@
                 warning.style.display = 'block';
             }
             const qrData = data.length > 800 ? data.substring(0, 800) : data;
-            QRCode.toCanvas(qrData, { width: 200, margin: 2 }, (err, canvas) => {
-                if (!err) container.appendChild(canvas);
-            });
+            try {
+                const qr = qrcode(0, 'M');
+                qr.addData(qrData);
+                qr.make();
+                const img = new Image();
+                img.src = qr.createDataURL(4, 8);
+                img.style.display = 'block';
+                container.appendChild(img);
+            } catch (e) {
+                warning.textContent = `QR generation failed: ${e.message}`;
+                warning.style.display = 'block';
+            }
             openModal($('#qrModal'));
         };
 
         $('#closeQrModal').onclick = () => closeModal($('#qrModal'));
         $('#qrModal').onclick = e => { if (e.target === $('#qrModal')) closeModal($('#qrModal')); };
         $('#downloadQrBtn').onclick = () => {
-            const canvas = $('#qrContainer canvas');
-            if (!canvas) return;
+            const img = $('#qrContainer img');
+            if (!img) return;
             const a = document.createElement('a');
-            a.href = canvas.toDataURL('image/png');
+            a.href = img.src;
             a.download = 'qrcode.png';
             a.click();
         };
