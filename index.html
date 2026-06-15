@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-sqjBv2yEGCVm93FQCWCa1O8F3aKJVrskBoRTKFMmE/c=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-kM8AwZuJ6JVC5jCWmJdBYDZvdqV9imj4KoxzCqCWcrA=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1464,6 +1464,17 @@
                         </div>
 
                         <div class="settings-group">
+                            <label class="settings-label">Image Output Format</label>
+                            <select class="settings-select" id="imageOutputFormat">
+                                <option value="original">Original</option>
+                                <option value="image/webp">WebP</option>
+                                <option value="image/avif">AVIF</option>
+                                <option value="image/png">PNG</option>
+                                <option value="image/jpeg">JPEG</option>
+                            </select>
+                        </div>
+
+                        <div class="settings-group">
                             <label class="settings-label">Split Output (chars)</label>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
                                 <input type="number" class="settings-input" id="splitSize" placeholder="e.g. 65000" min="1000" style="width: 120px;">
@@ -1653,46 +1664,25 @@
                 return result + '~>';
             }
 
-            function encodeBase58(uint8) {
-                const digits = [0];
-                for (let i = 0; i < uint8.length; i++) {
-                    let carry = uint8[i];
-                    for (let j = 0; j < digits.length; j++) {
-                        carry += digits[j] << 8;
-                        digits[j] = carry % 58;
-                        carry = Math.floor(carry / 58);
-                    }
-                    while (carry > 0) {
-                        digits.push(carry % 58);
-                        carry = Math.floor(carry / 58);
-                    }
-                }
+            function encodeBaseN(uint8, alphabet) {
+                const base = BigInt(alphabet.length);
+                let num = 0n;
+                for (let i = 0; i < uint8.length; i++) num = (num << 8n) | BigInt(uint8[i]);
+                if (num === 0n) return alphabet[0];
                 let result = '';
-                for (let i = 0; i < uint8.length && uint8[i] === 0; i++) result += '1';
-                for (let i = digits.length - 1; i >= 0; i--) result += B58[digits[i]];
+                while (num > 0n) {
+                    result = alphabet[Number(num % base)] + result;
+                    num = num / base;
+                }
+                const zeroChar = alphabet[0];
+                for (let i = 0; i < uint8.length && uint8[i] === 0; i++) result = zeroChar + result;
                 return result;
             }
 
+            function encodeBase58(uint8) { return encodeBaseN(uint8, B58); }
+
             const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-            function encodeBase62(uint8) {
-                const digits = [0];
-                for (let i = 0; i < uint8.length; i++) {
-                    let carry = uint8[i];
-                    for (let j = 0; j < digits.length; j++) {
-                        carry += digits[j] << 8;
-                        digits[j] = carry % 62;
-                        carry = Math.floor(carry / 62);
-                    }
-                    while (carry > 0) {
-                        digits.push(carry % 62);
-                        carry = Math.floor(carry / 62);
-                    }
-                }
-                let result = '';
-                for (let i = 0; i < uint8.length && uint8[i] === 0; i++) result += '0';
-                for (let i = digits.length - 1; i >= 0; i--) result += B62[digits[i]];
-                return result;
-            }
+            function encodeBase62(uint8) { return encodeBaseN(uint8, B62); }
 
             self.onmessage = function(e) {
                 const { id, buffer, format } = e.data;
@@ -1978,14 +1968,17 @@
                 let wasCompressed = false;
                 let wasResized = false;
 
-                // Resize images
-                if (resize && file.type.startsWith('image/') && resizeW > 0 && resizeH > 0) {
+                // Resize or convert images
+                const imgFmt = $('#imageOutputFormat').value;
+                const needsConvert = imgFmt !== 'original' && file.type.startsWith('image/');
+                if (file.type.startsWith('image/') && (resize && resizeW > 0 && resizeH > 0 || needsConvert)) {
                     try {
-                        data = await resizeImage(file, resizeW, resizeH);
+                        const outMime = needsConvert ? imgFmt : null;
+                        data = await resizeImage(file, resize ? resizeW : 0, resize ? resizeH : 0, outMime);
                         arrayBuffer = data.buffer;
                         wasResized = true;
                     } catch (e) {
-                        console.warn('Resize failed:', e);
+                        console.warn('Image processing failed:', e);
                     }
                 }
 
@@ -2060,20 +2053,22 @@
             }
         }
 
-        async function resizeImage(file, maxW, maxH) {
+        async function resizeImage(file, maxW, maxH, outputFormat) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     let w = img.width, h = img.height;
-                    if (w > maxW) { h = h * maxW / w; w = maxW; }
-                    if (h > maxH) { w = w * maxH / h; h = maxH; }
+                    if (maxW > 0 && w > maxW) { h = h * maxW / w; w = maxW; }
+                    if (maxH > 0 && h > maxH) { w = w * maxH / h; h = maxH; }
                     canvas.width = w;
                     canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const mime = outputFormat || file.type || 'image/png';
                     canvas.toBlob(blob => {
+                        if (!blob) { reject(new Error('Format not supported')); return; }
                         blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
-                    }, file.type || 'image/png', 0.9);
+                    }, mime, 0.9);
                 };
                 img.onerror = reject;
                 img.src = URL.createObjectURL(file);
