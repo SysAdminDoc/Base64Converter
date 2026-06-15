@@ -1261,6 +1261,10 @@
                                     Swap
                                 </button>
                                 <button class="btn" id="textClearBtn">Clear</button>
+                                <div class="checkbox-item" style="margin-left: auto;">
+                                    <input type="checkbox" id="perLineMode">
+                                    <label for="perLineMode">Per line</label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1288,8 +1292,10 @@
                                     Decode &amp; Download
                                 </button>
                                 <button class="btn" id="previewDecodeBtn">Preview</button>
+                                <button class="btn" id="validateBtn">Validate &amp; Repair</button>
                                 <button class="btn" id="clearDecodeBtn">Clear</button>
                             </div>
+                            <div id="validateResult" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;"></div>
 
                             <div class="preview-container" id="decodePreviewContainer" style="display: none;">
                                 <img class="preview-media" id="decodePreviewImg" style="display: none;">
@@ -2434,31 +2440,39 @@
             return btoa(binary);
         }
 
+        function convertSingleLine(line) {
+            if (textMode === 'encode') {
+                const format = $('#encodingFormat').value;
+                const bytes = new TextEncoder().encode(line);
+                let result;
+                if (format === 'base64' || format === 'base64url') {
+                    result = bytesToBase64(bytes);
+                    if (format === 'base64url') result = result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+                } else if (format === 'hex') {
+                    result = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+                } else {
+                    result = bytesToBase64(bytes);
+                }
+                if ($('#lineWrap').checked) result = result.match(/.{1,76}/g)?.join('\n') || result;
+                return result;
+            } else {
+                let b64 = line.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
+                while (b64.length % 4) b64 += '=';
+                const binary = atob(b64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                return new TextDecoder().decode(bytes);
+            }
+        }
+
         function textConvert() {
             const input = $('#textInput').value;
             if (!input) { $('#textOutput').value = ''; return; }
             try {
-                if (textMode === 'encode') {
-                    const format = $('#encodingFormat').value;
-                    const bytes = new TextEncoder().encode(input);
-                    let result;
-                    if (format === 'base64' || format === 'base64url') {
-                        result = bytesToBase64(bytes);
-                        if (format === 'base64url') result = result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-                    } else if (format === 'hex') {
-                        result = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-                    } else {
-                        result = bytesToBase64(bytes);
-                    }
-                    if ($('#lineWrap').checked) result = result.match(/.{1,76}/g)?.join('\n') || result;
-                    $('#textOutput').value = result;
+                if ($('#perLineMode').checked) {
+                    $('#textOutput').value = input.split('\n').map(line => line ? convertSingleLine(line) : '').join('\n');
                 } else {
-                    let b64 = input.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
-                    while (b64.length % 4) b64 += '=';
-                    const binary = atob(b64);
-                    const bytes = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                    $('#textOutput').value = new TextDecoder().decode(bytes);
+                    $('#textOutput').value = convertSingleLine(input);
                 }
             } catch (e) {
                 showToast('Conversion failed', 'error');
@@ -2513,6 +2527,62 @@
         $('#clearDecodeBtn').onclick = () => {
             $('#decodeInput').value = '';
             $('#decodePreviewContainer').style.display = 'none';
+            $('#validateResult').style.display = 'none';
+        };
+
+        $('#validateBtn').onclick = () => {
+            const raw = $('#decodeInput').value;
+            if (!raw.trim()) return;
+            const issues = [];
+            let cleaned = raw;
+
+            const hasDataUri = /^data:[^,]+,/.test(cleaned);
+            if (hasDataUri) { issues.push('Has data URI prefix (will be stripped for decode)'); cleaned = cleaned.replace(/^data:[^,]+,/, ''); }
+
+            const wsCount = (cleaned.match(/[\s\r\n]/g) || []).length;
+            if (wsCount > 0) { issues.push(`Contains ${wsCount} whitespace characters`); cleaned = cleaned.replace(/[\s\r\n]/g, ''); }
+
+            const invalid = cleaned.match(/[^A-Za-z0-9+/=\-_]/g);
+            if (invalid) {
+                const unique = [...new Set(invalid)];
+                issues.push(`Invalid characters: ${unique.map(c => JSON.stringify(c)).join(', ')}`);
+                cleaned = cleaned.replace(/[^A-Za-z0-9+/=\-_]/g, '');
+            }
+
+            const hasUrlSafe = /[-_]/.test(cleaned) && !/[+/]/.test(cleaned);
+            if (hasUrlSafe) { issues.push('URL-safe format detected (- and _ instead of + and /)'); cleaned = cleaned.replace(/-/g, '+').replace(/_/g, '/'); }
+
+            const padNeeded = (4 - (cleaned.replace(/=/g, '').length % 4)) % 4;
+            if (padNeeded > 0 && !cleaned.endsWith('='.repeat(padNeeded))) {
+                issues.push(`Missing ${padNeeded} padding character(s)`);
+                cleaned = cleaned.replace(/=+$/, '') + '='.repeat(padNeeded);
+            }
+
+            let canDecode = false;
+            try { atob(cleaned); canDecode = true; } catch { issues.push('Still invalid after repair — may be corrupted'); }
+
+            const inner = cleaned.replace(/=+$/, '');
+            try { atob(inner + '='.repeat((4 - inner.length % 4) % 4)); if (inner === btoa(atob(inner + '='.repeat((4 - inner.length % 4) % 4))).replace(/=+$/, '')) {} } catch {}
+            try {
+                const decoded = atob(cleaned);
+                const reEncoded = btoa(decoded);
+                if (/^[A-Za-z0-9+/]+=*$/.test(decoded) && decoded.length > 10) issues.push('Possible double-encoding detected');
+            } catch {}
+
+            const el = $('#validateResult');
+            if (issues.length === 0) {
+                el.innerHTML = '<span style="color:var(--success);">&#10003; Valid Base64 — no issues found</span>';
+            } else {
+                el.innerHTML = issues.map(i => `<div style="margin-bottom:0.25rem;">&#9888; ${escapeHtml(i)}</div>`).join('') +
+                    (canDecode ? '<button class="btn btn-sm btn-primary" style="margin-top:0.5rem;" id="applyRepairBtn">Apply Repair</button>' : '');
+                if (canDecode) {
+                    setTimeout(() => {
+                        const btn = $('#applyRepairBtn');
+                        if (btn) btn.onclick = () => { $('#decodeInput').value = cleaned; el.innerHTML = '<span style="color:var(--success);">&#10003; Repaired and applied</span>'; showToast('Input repaired', 'success'); };
+                    }, 0);
+                }
+            }
+            el.style.display = 'block';
         };
 
         function decodeBase64ToBytes(input) {
