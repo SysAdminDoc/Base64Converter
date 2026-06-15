@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-vvrODYw4OedbXyEqTOHBRmkDldiJSnnmcARwSjC5O1Q=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-q84ZsI0Z683MKyW+7/bpyBgwuldrQADQfUXLqcRaiuY=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -42,6 +42,7 @@
             --purple: #a371f7;
             --orange: #f0883e;
             --output-font-size: 13px;
+            --output-font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
         }
 
         [data-theme="light"] {
@@ -433,7 +434,7 @@
             border-radius: 6px;
             padding: 0.875rem;
             color: var(--text-primary);
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+            font-family: var(--output-font-family);
             font-size: var(--output-font-size);
             line-height: 1.5;
             resize: vertical;
@@ -1121,6 +1122,13 @@
                 <label class="font-size-control" title="Output font size">
                     <span aria-hidden="true">Aa</span>
                     <input type="range" id="fontSizeSlider" min="11" max="20" step="1" value="13" aria-label="Output font size">
+                    <select id="fontPicker" aria-label="Monospace font" style="padding:0.2rem 0.3rem;font-size:0.65rem;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);cursor:pointer;">
+                        <option value="default">System</option>
+                        <option value="'JetBrains Mono', monospace">JetBrains</option>
+                        <option value="'IBM Plex Mono', monospace">IBM Plex</option>
+                        <option value="'Cascadia Code', monospace">Cascadia</option>
+                        <option value="'Fira Code', monospace">Fira Code</option>
+                    </select>
                 </label>
                 <button class="btn btn-icon" id="diffToggle" title="Compare Base64 strings" aria-label="Compare Base64 strings">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -3401,17 +3409,32 @@
         }
 
         // ============================================
-        // FONT SIZE SLIDER
+        // FONT SIZE & FONT PICKER
         // ============================================
         const fontSizeSlider = $('#fontSizeSlider');
         const savedFontSize = localStorage.getItem('b64_fontsize') || '13';
         fontSizeSlider.value = savedFontSize;
         document.documentElement.style.setProperty('--output-font-size', savedFontSize + 'px');
-        
+
         fontSizeSlider.addEventListener('input', (e) => {
             const size = e.target.value;
             localStorage.setItem('b64_fontsize', size);
             document.documentElement.style.setProperty('--output-font-size', size + 'px');
+        });
+
+        const fontPicker = $('#fontPicker');
+        const savedFont = localStorage.getItem('b64_font') || 'default';
+        fontPicker.value = savedFont;
+        if (savedFont !== 'default') document.documentElement.style.setProperty('--output-font-family', savedFont);
+
+        fontPicker.addEventListener('change', (e) => {
+            const font = e.target.value;
+            localStorage.setItem('b64_font', font);
+            if (font === 'default') {
+                document.documentElement.style.removeProperty('--output-font-family');
+            } else {
+                document.documentElement.style.setProperty('--output-font-family', font);
+            }
         });
 
         // ============================================
