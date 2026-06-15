@@ -1295,10 +1295,12 @@
                                 </button>
                                 <button class="btn" id="previewDecodeBtn">Preview</button>
                                 <button class="btn" id="hexDumpBtn">Hex Dump</button>
+                                <button class="btn" id="deepDecodeBtn">Deep Decode</button>
                                 <button class="btn" id="validateBtn">Validate &amp; Repair</button>
                                 <button class="btn" id="clearDecodeBtn">Clear</button>
                             </div>
                             <div id="validateResult" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;"></div>
+                            <div id="deepDecodeResult" style="display: none; margin-top: 0.75rem;"></div>
 
                             <div class="preview-container" id="decodePreviewContainer" style="display: none;">
                                 <img class="preview-media" id="decodePreviewImg" style="display: none;">
@@ -1934,6 +1936,29 @@
         // ============================================
         // FILE PROCESSING
         // ============================================
+        async function gzipCompress(data) {
+            if (typeof CompressionStream !== 'undefined') {
+                const cs = new CompressionStream('gzip');
+                const writer = cs.writable.getWriter();
+                writer.write(data);
+                writer.close();
+                const chunks = [];
+                const reader = cs.readable.getReader();
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                }
+                const total = chunks.reduce((s, c) => s + c.length, 0);
+                const result = new Uint8Array(total);
+                let offset = 0;
+                for (const c of chunks) { result.set(c, offset); offset += c.length; }
+                return result;
+            }
+            if (typeof fflate !== 'undefined') return fflate.gzipSync(data);
+            return null;
+        }
+
         async function processFile(file, id) {
             const format = $('#encodingFormat').value;
             const compress = $('#compressFirst').checked;
@@ -1964,12 +1989,12 @@
                 }
 
                 // Compress
-                if (compress && typeof fflate !== 'undefined') {
+                if (compress) {
                     const skip = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/', 'audio/', 'application/zip', 'application/gzip'];
                     if (!skip.some(t => file.type.includes(t))) {
                         try {
-                            const compressed = fflate.gzipSync(data);
-                            if (compressed.length < data.length * 0.9) {
+                            const compressed = await gzipCompress(data);
+                            if (compressed && compressed.length < data.length * 0.9) {
                                 data = compressed;
                                 wasCompressed = true;
                                 arrayBuffer = data.buffer;
@@ -2699,6 +2724,53 @@
             } catch (e) {
                 showToast('Invalid Base64', 'error');
             }
+        };
+
+        $('#deepDecodeBtn').onclick = () => {
+            let current = $('#decodeInput').value.trim();
+            if (!current) return;
+            const layers = [];
+            const maxDepth = 5;
+            for (let depth = 0; depth < maxDepth; depth++) {
+                const fmt = detectFormat(current);
+                if (!fmt) break;
+                let decoded;
+                try {
+                    if (fmt === 'Hex') {
+                        const bytes = new Uint8Array(current.length / 2);
+                        for (let i = 0; i < current.length; i += 2) bytes[i / 2] = parseInt(current.substr(i, 2), 16);
+                        decoded = new TextDecoder().decode(bytes);
+                    } else if (fmt === 'Base64' || fmt === 'Base64URL') {
+                        let b64 = current.replace(/-/g, '+').replace(/_/g, '/');
+                        while (b64.length % 4) b64 += '=';
+                        const binary = atob(b64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        decoded = new TextDecoder().decode(bytes);
+                    } else {
+                        break;
+                    }
+                } catch { break; }
+                if (!decoded || decoded === current) break;
+                const isPrintable = /^[\x20-\x7E\t\n\r]+$/.test(decoded);
+                layers.push({ depth: depth + 1, format: fmt, preview: decoded.substring(0, 200), full: decoded });
+                if (!isPrintable || !detectFormat(decoded)) break;
+                current = decoded;
+            }
+            const el = $('#deepDecodeResult');
+            if (layers.length === 0) {
+                el.innerHTML = '<div style="padding:0.75rem;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;font-size:0.8rem;color:var(--text-secondary);">No nested encoding detected</div>';
+            } else {
+                el.innerHTML = layers.map(l => `<div style="padding:0.5rem 0.75rem;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;margin-bottom:0.5rem;">
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.25rem;">Layer ${l.depth} — ${escapeHtml(l.format)}</div>
+                    <pre style="font-size:0.75rem;white-space:pre-wrap;word-break:break-all;max-height:100px;overflow-y:auto;margin:0;">${escapeHtml(l.preview)}${l.full.length > 200 ? '...' : ''}</pre>
+                </div>`).join('') + `<button class="btn btn-sm btn-primary" id="useDeepDecodeBtn">Use Final Result</button>`;
+                setTimeout(() => {
+                    const btn = $('#useDeepDecodeBtn');
+                    if (btn) btn.onclick = () => { $('#decodeInput').value = layers[layers.length - 1].full; showToast('Final decoded result applied', 'success'); };
+                }, 0);
+            }
+            el.style.display = 'block';
         };
 
         $('#decodeBtn').onclick = async () => {
