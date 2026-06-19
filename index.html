@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-322vOw+KeFyMk9bLztfGnlK20K748a0H+hXDVN6MGt0=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-4t06kAZwiy3Rd7Qo36XyVwGOe/isIfzey5IcV/kmwOw=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1819,22 +1819,41 @@
             const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
             function encodeBase62(uint8) { return encodeBaseN(uint8, B62); }
 
+            function encodeChunk(data, format) {
+                switch (format) {
+                    case 'base64url': return encodeBase64(data, true);
+                    case 'base32': return encodeBase32(data);
+                    case 'hex': return encodeHex(data);
+                    case 'ascii85': return encodeAscii85(data);
+                    case 'base58': return encodeBase58(data);
+                    case 'base62': return encodeBase62(data);
+                    default: return encodeBase64(data, false);
+                }
+            }
+
             self.onmessage = function(e) {
-                const { id, buffer, format } = e.data;
+                const { id, buffer, format, chunkIndex, totalChunks } = e.data;
                 try {
                     const data = new Uint8Array(buffer);
-                    const report = (p) => self.postMessage({ id, type: 'progress', progress: p });
-                    let result;
-                    switch (format) {
-                        case 'base64url': result = encodeBase64(data, true, report); break;
-                        case 'base32': result = encodeBase32(data); break;
-                        case 'hex': result = encodeHex(data); break;
-                        case 'ascii85': result = encodeAscii85(data); break;
-                        case 'base58': result = encodeBase58(data); break;
-                        case 'base62': result = encodeBase62(data); break;
-                        default: result = encodeBase64(data, false, report);
+                    if (totalChunks !== undefined) {
+                        // Streaming mode: encode a single chunk
+                        const result = encodeChunk(data, format);
+                        self.postMessage({ id, type: 'chunk', chunkIndex, result, chunkSize: data.length, encodedSize: result.length });
+                    } else {
+                        // Legacy single-buffer mode
+                        const report = (p) => self.postMessage({ id, type: 'progress', progress: p });
+                        let result;
+                        switch (format) {
+                            case 'base64url': result = encodeBase64(data, true, report); break;
+                            case 'base32': result = encodeBase32(data); break;
+                            case 'hex': result = encodeHex(data); break;
+                            case 'ascii85': result = encodeAscii85(data); break;
+                            case 'base58': result = encodeBase58(data); break;
+                            case 'base62': result = encodeBase62(data); break;
+                            default: result = encodeBase64(data, false, report);
+                        }
+                        self.postMessage({ id, type: 'complete', result, originalSize: data.length, encodedSize: result.length });
                     }
-                    self.postMessage({ id, type: 'complete', result, originalSize: data.length, encodedSize: result.length });
                 } catch (error) {
                     self.postMessage({ id, type: 'error', error: error.message });
                 }
@@ -2093,11 +2112,138 @@
             return null;
         }
 
+        // Streaming threshold: files above this use chunked reading
+        const STREAM_THRESHOLD = 50 * 1024 * 1024; // 50 MB
+        const CHUNK_SIZE = 16 * 1024 * 1024; // 16 MB per chunk
+
+        // Formats that can be streamed (each chunk encodes independently)
+        function isStreamableFormat(fmt) {
+            return ['base64', 'base64url', 'base32', 'hex', 'ascii85'].includes(fmt);
+        }
+
+        // Chunk alignment requirement per format (input bytes)
+        function chunkAlignment(fmt) {
+            switch (fmt) {
+                case 'base64': case 'base64url': return 3;
+                case 'base32': return 5;
+                case 'ascii85': return 4;
+                default: return 1; // hex
+            }
+        }
+
+        // Strip ASCII85 envelope (<~ prefix, ~> suffix) from intermediate chunks
+        function stripA85Envelope(str, isFirst, isLast) {
+            let s = str;
+            if (!isFirst && s.startsWith('<~')) s = s.slice(2);
+            if (!isLast && s.endsWith('~>')) s = s.slice(0, -2);
+            return s;
+        }
+
+        async function processFileStreaming(file, id, format, data, wasCompressed, wasResized, startTime) {
+            const totalSize = data.byteLength || data.length;
+            const align = chunkAlignment(format);
+            const alignedChunkSize = Math.floor(CHUNK_SIZE / align) * align;
+            const totalChunks = Math.ceil(totalSize / alignedChunkSize);
+
+            updateFileStatus(id, 'processing', 0);
+
+            const resultParts = new Array(totalChunks);
+            let completedChunks = 0;
+            let totalOriginal = 0;
+            let totalEncoded = 0;
+
+            return new Promise((resolve, reject) => {
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * alignedChunkSize;
+                    const end = Math.min(start + alignedChunkSize, totalSize);
+                    const chunkData = data.slice(start, end);
+                    const chunkBuffer = chunkData.buffer ? chunkData.buffer.slice(chunkData.byteOffset, chunkData.byteOffset + chunkData.byteLength) : chunkData;
+
+                    const wid = workerId++;
+                    workerCallbacks.set(wid, {
+                        onProgress: () => {},
+                        onChunk: (chunkIndex, result, chunkSize, encodedSize) => {
+                            // Strip ASCII85 envelope from non-terminal chunks
+                            if (format === 'ascii85') {
+                                result = stripA85Envelope(result, chunkIndex === 0, chunkIndex === totalChunks - 1);
+                            }
+                            // Strip Base32 padding from non-final chunks
+                            if (format === 'base32' && chunkIndex < totalChunks - 1) {
+                                result = result.replace(/=+$/, '');
+                            }
+                            resultParts[chunkIndex] = result;
+                            totalOriginal += chunkSize;
+                            totalEncoded += encodedSize;
+                            completedChunks++;
+                            updateFileStatus(id, 'processing', (completedChunks / totalChunks) * 100);
+
+                            if (completedChunks === totalChunks) {
+                                // Reassemble
+                                let fullResult;
+                                if (format === 'ascii85') {
+                                    fullResult = '<~' + resultParts.join('') + '~>';
+                                } else {
+                                    fullResult = resultParts.join('');
+                                }
+                                finishFile(file, id, format, fullResult, totalOriginal, totalEncoded, wasCompressed, wasResized, startTime, data).then(resolve).catch(reject);
+                            }
+                        },
+                        onError: e => { updateFileStatus(id, 'error', 0); reject(new Error(e)); }
+                    });
+                    worker.postMessage({ id: wid, buffer: chunkBuffer, format, chunkIndex: i, totalChunks }, [chunkBuffer]);
+                }
+            });
+        }
+
+        async function finishFile(file, id, format, result, origSize, encSize, wasCompressed, wasResized, startTime, dataForHash) {
+            const lineWrap = $('#lineWrap').checked;
+            const includeUri = $('#includeDataUri').checked;
+            const elapsed = performance.now() - startTime;
+            let finalResult = result;
+
+            // Line wrap
+            if (lineWrap && (format === 'base64' || format === 'base64url')) {
+                finalResult = result.match(/.{1,76}/g)?.join('\n') || result;
+            }
+
+            // Data URI
+            if (includeUri && format === 'base64') {
+                const mime = wasCompressed ? 'application/gzip' : file.type || 'application/octet-stream';
+                finalResult = `data:${mime};base64,${result}`;
+            }
+
+            // Hashes
+            let hashes = null;
+            if ($('#showHashes').checked) {
+                const hashBuffer = dataForHash instanceof Uint8Array ? dataForHash.buffer.slice(dataForHash.byteOffset, dataForHash.byteOffset + dataForHash.byteLength) : dataForHash;
+                hashes = await computeHashes(hashBuffer);
+            }
+
+            const fileData = files.get(id);
+            fileData.result = finalResult;
+            fileData.rawResult = result;
+            fileData.originalSize = origSize;
+            fileData.encodedSize = encSize;
+            fileData.wasCompressed = wasCompressed;
+            fileData.wasResized = wasResized;
+            fileData.hashes = hashes;
+            fileData.processingTime = elapsed;
+            fileData.mimeType = file.type;
+
+            updateFileStatus(id, 'complete', 100);
+            updateStats(file.size, elapsed, origSize, result.length);
+
+            if ($('#saveToHistory').checked) {
+                saveToHistory(file.name, file.type, file.size, finalResult);
+            }
+
+            return finalResult;
+        }
+
         async function processFile(file, id) {
             const format = $('#encodingFormat').value;
             const compress = $('#compressFirst').checked;
             const includeUri = $('#includeDataUri').checked;
-            const lineWrap = $('#lineWrap').checked;
             const resize = $('#resizeEnabled').checked;
             const resizeW = parseInt($('#resizeWidth').value) || 0;
             const resizeH = parseInt($('#resizeHeight').value) || 0;
@@ -2140,50 +2286,20 @@
                     }
                 }
 
+                // Use streaming for large files with streamable formats
+                if (data.length > STREAM_THRESHOLD && isStreamableFormat(format)) {
+                    return processFileStreaming(file, id, format, data, wasCompressed, wasResized, startTime);
+                }
+
                 const wid = workerId++;
                 return new Promise((resolve, reject) => {
                     workerCallbacks.set(wid, {
                         onProgress: p => updateFileStatus(id, 'processing', p),
                         onComplete: async (result, origSize, encSize) => {
-                            const elapsed = performance.now() - startTime;
-                            let finalResult = result;
-
-                            // Line wrap
-                            if (lineWrap && (format === 'base64' || format === 'base64url')) {
-                                finalResult = result.match(/.{1,76}/g)?.join('\n') || result;
-                            }
-
-                            // Data URI
-                            if (includeUri && format === 'base64') {
-                                const mime = wasCompressed ? 'application/gzip' : file.type || 'application/octet-stream';
-                                finalResult = `data:${mime};base64,${result}`;
-                            }
-
-                            // Hashes
-                            let hashes = null;
-                            if ($('#showHashes').checked) {
-                                hashes = await computeHashes(arrayBuffer);
-                            }
-
-                            const fileData = files.get(id);
-                            fileData.result = finalResult;
-                            fileData.rawResult = result;
-                            fileData.originalSize = origSize;
-                            fileData.encodedSize = encSize;
-                            fileData.wasCompressed = wasCompressed;
-                            fileData.wasResized = wasResized;
-                            fileData.hashes = hashes;
-                            fileData.processingTime = elapsed;
-                            fileData.mimeType = file.type;
-
-                            updateFileStatus(id, 'complete', 100);
-                            updateStats(file.size, elapsed, origSize, result.length);
-
-                            if ($('#saveToHistory').checked) {
-                                saveToHistory(file.name, file.type, file.size, finalResult);
-                            }
-
-                            resolve(finalResult);
+                            try {
+                                const finalResult = await finishFile(file, id, format, result, origSize, encSize, wasCompressed, wasResized, startTime, data);
+                                resolve(finalResult);
+                            } catch (e) { reject(e); }
                         },
                         onError: e => { updateFileStatus(id, 'error', 0); reject(new Error(e)); }
                     });
@@ -2219,11 +2335,12 @@
         }
 
         worker.onmessage = e => {
-            const { id, type, progress, result, originalSize, encodedSize, error } = e.data;
+            const { id, type, progress, result, originalSize, encodedSize, error, chunkIndex, chunkSize } = e.data;
             const cb = workerCallbacks.get(id);
             if (!cb) return;
             if (type === 'progress') cb.onProgress(progress);
             else if (type === 'complete') { cb.onComplete(result, originalSize, encodedSize); workerCallbacks.delete(id); }
+            else if (type === 'chunk') { if (cb.onChunk) cb.onChunk(chunkIndex, result, chunkSize, e.data.encodedSize); workerCallbacks.delete(id); }
             else if (type === 'error') { cb.onError(error); workerCallbacks.delete(id); }
         };
 
@@ -2436,7 +2553,11 @@
 
         async function handleFiles(fileList) {
             for (const file of Array.from(fileList)) {
-                if (file.size > 100 * 1024 * 1024) { showToast(`${file.name} exceeds 100MB`, 'error'); continue; }
+                const format = $('#encodingFormat').value;
+                // Base58/Base62 require full file in memory; warn above 500 MB
+                if (!isStreamableFormat(format) && file.size > 500 * 1024 * 1024) {
+                    showToast(`${file.name}: ${format} requires full file in memory — limit 500 MB`, 'error'); continue;
+                }
                 const id = genId();
                 const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
                 files.set(id, { file, status: 'pending', progress: 0, result: null, preview });

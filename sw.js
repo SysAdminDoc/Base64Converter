@@ -1,4 +1,4 @@
-const CACHE = 'b64pro-v0.3.3';
+const CACHE = 'b64pro-v0.3.4';
 const ASSETS = [
   './',
   './index.html',
