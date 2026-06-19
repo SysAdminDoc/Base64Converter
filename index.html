@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-z5OizHkF+l5jxM5VIRJUpKiv4kYWQq1W9Tw8nPYgRno=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-8WghxiElKmHgU5e+li5KzqqzEGhPSnv6M18JRILSbUk=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1377,6 +1377,7 @@
                                     Swap
                                 </button>
                                 <button class="btn" id="textClearBtn">Clear</button>
+                                <button class="btn" id="textRtlBtn" title="Toggle right-to-left text direction">RTL</button>
                                 <div class="checkbox-item" style="margin-left: auto;">
                                     <input type="checkbox" id="perLineMode">
                                     <label for="perLineMode">Per line</label>
@@ -1454,8 +1455,33 @@
                                     <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
                                         <button class="btn btn-sm" id="copyPemBtn">Copy PEM</button>
                                         <button class="btn btn-sm" id="parseCertBtn">Parse X.509</button>
+                                        <button class="btn btn-sm" id="parseKeyBtn">Parse Key</button>
                                     </div>
                                     <div id="certParseResult" style="display:none; margin-top:0.75rem; padding:0.75rem; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:6px; font-family:var(--output-font-family); font-size:0.75rem; white-space:pre-wrap; max-height:300px; overflow-y:auto;"></div>
+                                </div>
+                            </div>
+
+                            <!-- DNS TXT Record Builder -->
+                            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                                <div class="collapsible-header" id="dnsToggle">
+                                    <span class="settings-label" style="margin: 0;">DNS TXT Record Builder</span>
+                                    <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </div>
+                                <div class="collapsible-content" id="dnsContent">
+                                    <div class="pem-controls">
+                                        <select class="pem-select" id="dnsRecordType">
+                                            <option value="dkim">DKIM (p=...)</option>
+                                            <option value="spf">SPF (TXT)</option>
+                                            <option value="custom">Custom TXT</option>
+                                        </select>
+                                        <input type="text" class="settings-input" id="dnsDomain" placeholder="example.com" style="width: 140px;">
+                                        <input type="text" class="settings-input" id="dnsSelector" placeholder="selector" style="width: 100px;">
+                                        <button class="btn btn-sm" id="dnsBuildBtn">Build Record</button>
+                                    </div>
+                                    <textarea class="text-input" id="dnsOutput" placeholder="DNS TXT record output..." style="min-height: 100px; margin-top: 0.75rem; font-family: var(--output-font-family); font-size: 0.75rem;" readonly></textarea>
+                                    <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                                        <button class="btn btn-sm" id="copyDnsBtn">Copy</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1921,14 +1947,14 @@
             return d.innerHTML;
         }
 
-        function showToast(msg, type = 'info') {
+        function showToast(msg, type = 'info', duration = 3000) {
             const icons = { success: '✓', error: '✗', warning: '⚠', info: 'ℹ' };
             const t = document.createElement('div');
             t.className = 'toast ' + type;
             t.innerHTML = `<span style="font-size:0.9rem;flex-shrink:0;">${icons[type] || icons.info}</span> ${escapeHtml(msg)}`;
             $('#toastContainer').appendChild(t);
             requestAnimationFrame(() => t.classList.add('visible'));
-            setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 300); }, 3000);
+            setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 300); }, duration);
             $('#srStatus').textContent = msg;
         }
 
@@ -3000,6 +3026,16 @@
 
         $('#textClearBtn').onclick = () => { $('#textInput').value = ''; $('#textOutput').value = ''; };
 
+        // RTL toggle for text panel
+        $('#textRtlBtn').onclick = () => {
+            const isRtl = $('#textOutput').dir === 'rtl';
+            const newDir = isRtl ? 'ltr' : 'rtl';
+            $('#textOutput').dir = newDir;
+            $('#textInput').dir = newDir;
+            $('#textRtlBtn').classList.toggle('active', !isRtl);
+            showToast(`Text direction: ${newDir.toUpperCase()}`, 'success');
+        };
+
         // ============================================
         // DECODE PANEL
         // ============================================
@@ -3408,19 +3444,92 @@
         // ============================================
         // KEYBOARD SHORTCUTS
         // ============================================
+        // ============================================
+        // CHORDED SHORTCUTS
+        // ============================================
+        let chordLeader = null;
+        let chordTimer = null;
+
+        const chordMaps = {
+            g: { // "go" — navigate tabs
+                e: { action: () => switchTab($('#tab-encode')), desc: 'Go to Encode' },
+                t: { action: () => switchTab($('#tab-text')), desc: 'Go to Text' },
+                d: { action: () => switchTab($('#tab-decode')), desc: 'Go to Decode' },
+                j: { action: () => switchTab($('#tab-jwt')), desc: 'Go to JWT' },
+            },
+            f: { // "format" — switch encoding format
+                b: { action: () => { $('#encodingFormat').value = 'base64'; }, desc: 'Base64' },
+                u: { action: () => { $('#encodingFormat').value = 'base64url'; }, desc: 'Base64 URL' },
+                '3': { action: () => { $('#encodingFormat').value = 'base32'; }, desc: 'Base32' },
+                h: { action: () => { $('#encodingFormat').value = 'hex'; }, desc: 'Hex' },
+                '8': { action: () => { $('#encodingFormat').value = 'ascii85'; }, desc: 'ASCII85' },
+                '5': { action: () => { $('#encodingFormat').value = 'base58'; }, desc: 'Base58' },
+                '6': { action: () => { $('#encodingFormat').value = 'base62'; }, desc: 'Base62' },
+                r: { action: () => { $('#encodingFormat').value = 'url'; }, desc: 'URL Encode' },
+                '7': { action: () => { $('#encodingFormat').value = 'utf7'; }, desc: 'UTF-7' },
+                i: { action: () => { $('#encodingFormat').value = 'imap-utf7'; }, desc: 'IMAP UTF-7' },
+            },
+        };
+
+        function showChordHint(leader) {
+            const map = chordMaps[leader];
+            if (!map) return;
+            const keys = Object.entries(map).map(([k, v]) => `${leader}+${k}: ${v.desc}`).join('  |  ');
+            showToast(keys, 'info', 2000);
+        }
+
+        function cancelChord() {
+            chordLeader = null;
+            if (chordTimer) { clearTimeout(chordTimer); chordTimer = null; }
+        }
+
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
+                cancelChord();
                 const overlay = document.querySelector('.modal-overlay.visible');
                 if (overlay) closeModal(overlay);
+                return;
             }
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
+                cancelChord();
                 openPalette();
+                return;
             }
-            if (e.key === '?' && !e.ctrlKey && !e.metaKey && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
-                e.preventDefault();
-                openModal($('#paletteModal'));
-                showShortcutHelp();
+
+            // Skip when focused on input elements
+            const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+            const noMod = !e.ctrlKey && !e.metaKey && !e.altKey;
+
+            if (!inInput && noMod) {
+                // Chord second key
+                if (chordLeader && chordMaps[chordLeader]) {
+                    e.preventDefault();
+                    const map = chordMaps[chordLeader];
+                    const entry = map[e.key];
+                    cancelChord();
+                    if (entry) {
+                        entry.action();
+                        showToast(entry.desc, 'success');
+                    }
+                    return;
+                }
+
+                // Chord leader key
+                if (chordMaps[e.key]) {
+                    e.preventDefault();
+                    chordLeader = e.key;
+                    showChordHint(e.key);
+                    chordTimer = setTimeout(cancelChord, 2000);
+                    return;
+                }
+
+                if (e.key === '?') {
+                    e.preventDefault();
+                    openModal($('#paletteModal'));
+                    showShortcutHelp();
+                    return;
+                }
             }
         });
 
@@ -3450,17 +3559,23 @@
             { name: 'Toggle Compression', action: () => { const c = $('#compressFirst'); c.checked = !c.checked; } },
             { name: 'Toggle Line Wrap', action: () => { const c = $('#lineWrap'); c.checked = !c.checked; } },
             { name: 'Keyboard Shortcuts', action: () => showShortcutHelp(), key: '?' },
+            { name: 'Build DNS TXT Record', action: () => { switchTab($('#tab-decode')); $('#dnsContent').classList.add('open'); $('#dnsToggle .chevron').classList.add('open'); } },
+            { name: 'Parse RSA/EC Key', action: () => { switchTab($('#tab-decode')); $('#pemContent').classList.add('open'); $('#pemToggle .chevron').classList.add('open'); } },
+            { name: 'Toggle RTL Text', action: () => $('#textRtlBtn').click() },
         ];
 
         function showShortcutHelp() {
             const shortcuts = [
                 ['Ctrl+K / ⌘K', 'Open command palette'],
                 ['Ctrl+Enter', 'Convert text (Text panel)'],
-                ['Escape', 'Close modal / palette'],
+                ['Escape', 'Close modal / cancel chord'],
                 ['← → ↑ ↓', 'Navigate between tabs'],
                 ['Home / End', 'First / last tab'],
                 ['Tab / Shift+Tab', 'Cycle within modal'],
                 ['?', 'Show this help'],
+                ['g → e/t/d/j', 'Go to Encode/Text/Decode/JWT'],
+                ['f → b/u/3/h/8/5/6', 'Format: B64/URL/B32/Hex/A85/B58/B62'],
+                ['f → r/7/i', 'Format: URL Encode/UTF-7/IMAP UTF-7'],
             ];
             const el = $('#paletteResults');
             el.innerHTML = shortcuts.map(([key, desc]) =>
@@ -3823,6 +3938,209 @@
                 $('#certParseResult').textContent = 'Failed to parse: ' + e.message;
                 $('#certParseResult').style.display = 'block';
             }
+        };
+
+        // RSA / EC Key Parser
+        const EC_CURVES = {
+            '1.2.840.10045.3.1.7': { name: 'P-256 (secp256r1)', bits: 256 },
+            '1.3.132.0.34': { name: 'P-384 (secp384r1)', bits: 384 },
+            '1.3.132.0.35': { name: 'P-521 (secp521r1)', bits: 521 },
+            '1.3.132.0.10': { name: 'secp256k1', bits: 256 },
+            '1.3.101.110': { name: 'X25519', bits: 255 },
+            '1.3.101.111': { name: 'X448', bits: 448 },
+            '1.3.101.112': { name: 'Ed25519', bits: 255 },
+            '1.3.101.113': { name: 'Ed448', bits: 448 },
+        };
+        const KEY_ALGO_OIDS = {
+            '1.2.840.113549.1.1.1': 'RSA',
+            '1.2.840.10045.2.1': 'EC',
+            '1.3.101.110': 'X25519',
+            '1.3.101.111': 'X448',
+            '1.3.101.112': 'Ed25519',
+            '1.3.101.113': 'Ed448',
+        };
+
+        function parseRSAModulus(buf, start, end) {
+            // RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER }
+            const children = parseASN1Children(buf, start, end);
+            if (children.length < 2) return null;
+            const modNode = children[0]; // INTEGER
+            let modBytes = buf.slice(modNode.start, modNode.end);
+            // Strip leading zero byte (sign byte)
+            if (modBytes[0] === 0 && modBytes.length > 1) modBytes = modBytes.slice(1);
+            const bits = modBytes.length * 8;
+            const expNode = children[1]; // INTEGER
+            let exp = 0n;
+            for (let i = expNode.start; i < expNode.end; i++) exp = (exp << 8n) | BigInt(buf[i]);
+            return { bits, exponent: exp.toString() };
+        }
+
+        $('#parseKeyBtn').onclick = () => {
+            let input = $('#decodeInput').value.trim();
+            if (!input) { showToast('Paste a PEM key first', 'warning'); return; }
+
+            // Detect key type from PEM headers
+            const pemMatch = input.match(/-----BEGIN\s+(.*?)-----/);
+            const pemType = pemMatch ? pemMatch[1] : '';
+            input = input.replace(/-----BEGIN [^-]+-----/g, '').replace(/-----END [^-]+-----/g, '').replace(/\s/g, '');
+
+            try {
+                const binary = atob(input);
+                const buf = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
+
+                const lines = [];
+                const outer = parseASN1(buf, 0);
+                const outerChildren = parseASN1Children(buf, outer.start, outer.end);
+
+                if (pemType === 'RSA PRIVATE KEY' || pemType === 'RSA PUBLIC KEY') {
+                    // PKCS#1 RSA key (raw RSA structure)
+                    const rsa = parseRSAModulus(buf, outer.start, outer.end);
+                    if (rsa) {
+                        lines.push(`Type:       RSA ${pemType.includes('PRIVATE') ? 'Private' : 'Public'} Key (PKCS#1)`);
+                        lines.push(`Key Size:   ${rsa.bits} bits`);
+                        lines.push(`Exponent:   ${rsa.exponent}`);
+                    } else {
+                        lines.push(`Type:       RSA Key (PKCS#1, could not parse modulus)`);
+                    }
+                } else if (pemType === 'EC PRIVATE KEY') {
+                    // SEC 1 EC private key
+                    const children = outerChildren;
+                    // ECPrivateKey ::= SEQUENCE { version, privateKey, [0] parameters, [1] publicKey }
+                    const paramNode = children.find(n => n.tag === 0xa0);
+                    if (paramNode) {
+                        const oidNode = parseASN1(buf, paramNode.start);
+                        const oid = asn1OID(buf, oidNode.start, oidNode.length);
+                        const curve = EC_CURVES[oid];
+                        lines.push(`Type:       EC Private Key (SEC 1)`);
+                        lines.push(`Curve:      ${curve ? curve.name : oid}`);
+                        lines.push(`Key Size:   ${curve ? curve.bits + ' bits' : 'unknown'}`);
+                    } else {
+                        lines.push(`Type:       EC Private Key (SEC 1, no explicit parameters)`);
+                    }
+                } else if (pemType === 'PUBLIC KEY' || pemType === 'PRIVATE KEY') {
+                    // PKCS#8 / SubjectPublicKeyInfo
+                    // SEQUENCE { SEQUENCE { algorithm OID, parameters }, key BIT STRING/OCTET STRING }
+                    if (outerChildren.length >= 2) {
+                        const algoSeq = parseASN1(buf, outerChildren[0].start);
+                        const algoChildren = parseASN1Children(buf, algoSeq.start, algoSeq.end);
+                        const algoOid = asn1OID(buf, algoChildren[0].start, algoChildren[0].length);
+                        const algoName = KEY_ALGO_OIDS[algoOid] || algoOid;
+
+                        lines.push(`Type:       ${algoName} ${pemType === 'PRIVATE KEY' ? 'Private' : 'Public'} Key (${pemType === 'PRIVATE KEY' ? 'PKCS#8' : 'SPKI'})`);
+
+                        if (algoName === 'RSA') {
+                            // Key data is BIT STRING wrapping a SEQUENCE { modulus, exponent }
+                            const keyNode = outerChildren[pemType === 'PRIVATE KEY' ? 2 : 1];
+                            let keyStart = keyNode.start;
+                            if (keyNode.tag === 0x03) keyStart++; // skip BIT STRING unused-bits byte
+                            const innerSeq = parseASN1(buf, keyStart);
+                            const rsa = parseRSAModulus(buf, innerSeq.start, innerSeq.end);
+                            if (rsa) {
+                                lines.push(`Key Size:   ${rsa.bits} bits`);
+                                lines.push(`Exponent:   ${rsa.exponent}`);
+                            }
+                        } else if (algoName === 'EC') {
+                            if (algoChildren.length >= 2) {
+                                const curveOid = asn1OID(buf, algoChildren[1].start, algoChildren[1].length);
+                                const curve = EC_CURVES[curveOid];
+                                lines.push(`Curve:      ${curve ? curve.name : curveOid}`);
+                                lines.push(`Key Size:   ${curve ? curve.bits + ' bits' : 'unknown'}`);
+                            }
+                        } else {
+                            // Ed25519, X25519, etc. — algorithm OID is the curve
+                            const curve = EC_CURVES[algoOid];
+                            if (curve) {
+                                lines.push(`Curve:      ${curve.name}`);
+                                lines.push(`Key Size:   ${curve.bits} bits`);
+                            }
+                        }
+                    }
+                } else {
+                    // Unknown PEM type — try to detect from structure
+                    lines.push(`PEM Type:   ${pemType || 'unknown'}`);
+                    lines.push(`DER Size:   ${buf.length} bytes`);
+                    lines.push(`ASN.1 Tag:  0x${outer.tag.toString(16)}`);
+                }
+
+                if (lines.length === 0) lines.push('Could not determine key type');
+                lines.push(`DER Size:   ${buf.length} bytes`);
+
+                $('#certParseResult').textContent = lines.join('\n');
+                $('#certParseResult').style.display = 'block';
+                $('#pemContent').classList.add('open');
+                $('#pemToggle .chevron').classList.add('open');
+            } catch (e) {
+                $('#certParseResult').textContent = 'Failed to parse key: ' + e.message;
+                $('#certParseResult').style.display = 'block';
+            }
+        };
+
+        // DNS TXT Record Builder
+        function splitTxtChunks(str, maxLen = 255) {
+            const chunks = [];
+            for (let i = 0; i < str.length; i += maxLen) {
+                chunks.push(str.substring(i, i + maxLen));
+            }
+            return chunks;
+        }
+
+        $('#dnsToggle').onclick = () => {
+            $('#dnsContent').classList.toggle('open');
+            $('#dnsToggle .chevron').classList.toggle('open');
+        };
+
+        $('#dnsBuildBtn').onclick = () => {
+            const b64Input = $('#decodeInput').value.trim()
+                .replace(/-----BEGIN [^-]+-----/g, '').replace(/-----END [^-]+-----/g, '')
+                .replace(/\s/g, '');
+            if (!b64Input) { showToast('Paste Base64 data in the decode input first', 'warning'); return; }
+
+            const type = $('#dnsRecordType').value;
+            const domain = $('#dnsDomain').value.trim() || 'example.com';
+            const selector = $('#dnsSelector').value.trim() || 'default';
+            let output = '';
+
+            if (type === 'dkim') {
+                // DKIM record: selector._domainkey.domain IN TXT "v=DKIM1; k=rsa; p=BASE64..."
+                const value = `v=DKIM1; k=rsa; p=${b64Input}`;
+                const chunks = splitTxtChunks(value);
+                const name = `${selector}._domainkey.${domain}.`;
+                if (chunks.length === 1) {
+                    output = `${name}\tIN\tTXT\t"${chunks[0]}"`;
+                } else {
+                    output = `${name}\tIN\tTXT\t( ${chunks.map(c => `"${c}"`).join('\n\t\t\t\t  ')} )`;
+                }
+                output += `\n\n; Record length: ${value.length} chars`;
+                if (chunks.length > 1) output += ` (${chunks.length} chunks)`;
+                output += `\n; Key size: ~${Math.floor(b64Input.length * 6 / 8)} bytes`;
+            } else if (type === 'spf') {
+                const value = `v=spf1 ${b64Input}`;
+                const chunks = splitTxtChunks(value);
+                output = `${domain}.\tIN\tTXT\t"${chunks[0]}"`;
+                if (chunks.length > 1) {
+                    output += `\n\n; Warning: SPF record exceeds 255 chars (${value.length} total)`;
+                    output += `\n; Consider using include: or redirect= mechanisms`;
+                }
+            } else {
+                // Custom TXT
+                const chunks = splitTxtChunks(b64Input);
+                if (chunks.length === 1) {
+                    output = `${domain}.\tIN\tTXT\t"${chunks[0]}"`;
+                } else {
+                    output = `${domain}.\tIN\tTXT\t( ${chunks.map(c => `"${c}"`).join('\n\t\t\t\t  ')} )`;
+                }
+                output += `\n\n; Total length: ${b64Input.length} chars`;
+                if (chunks.length > 1) output += ` (${chunks.length} chunks of 255)`;
+            }
+
+            $('#dnsOutput').value = output;
+            showToast('DNS record generated', 'success');
+        };
+
+        $('#copyDnsBtn').onclick = () => {
+            const text = $('#dnsOutput').value;
+            if (text) { navigator.clipboard.writeText(text); showToast('DNS record copied', 'success'); }
         };
 
         // ============================================
