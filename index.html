@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-4t06kAZwiy3Rd7Qo36XyVwGOe/isIfzey5IcV/kmwOw=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-z5OizHkF+l5jxM5VIRJUpKiv4kYWQq1W9Tw8nPYgRno=' https://cdn.jsdelivr.net blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https:; object-src 'none'; base-uri 'none';">
     <meta property="og:title" content="Base64 Converter Pro">
     <meta property="og:description" content="Professional Base64 converter with compression, multiple encodings, batch processing, code generation, and offline support. 100% client-side.">
     <meta property="og:type" content="website">
@@ -1539,6 +1539,8 @@
                                 <option value="base58">Base58 (Bitcoin)</option>
                                 <option value="base62">Base62 (URL-safe)</option>
                                 <option value="url">URL Encode</option>
+                                <option value="utf7">UTF-7 (RFC 2152)</option>
+                                <option value="imap-utf7">IMAP UTF-7 (RFC 3501)</option>
                             </select>
                         </div>
                         
@@ -2242,6 +2244,14 @@
 
         async function processFile(file, id) {
             const format = $('#encodingFormat').value;
+
+            // UTF-7 and IMAP UTF-7 are text-to-text encodings — not for binary files
+            if (format === 'utf7' || format === 'imap-utf7') {
+                updateFileStatus(id, 'error', 0);
+                showToast(`${format === 'utf7' ? 'UTF-7' : 'IMAP UTF-7'} is a text encoding — use the Text tab`, 'error');
+                return;
+            }
+
             const compress = $('#compressFirst').checked;
             const includeUri = $('#includeDataUri').checked;
             const resize = $('#resizeEnabled').checked;
@@ -2785,10 +2795,139 @@
             return btoa(binary);
         }
 
+        // ============================================
+        // UTF-7 / IMAP UTF-7 (RFC 2152 / RFC 3501)
+        // ============================================
+        // "Direct" ASCII chars that pass through unencoded in UTF-7
+        const UTF7_DIRECT = new Set();
+        for (let c = 0x20; c <= 0x7E; c++) if (c !== 0x2B) UTF7_DIRECT.add(c); // printable ASCII except '+'
+        UTF7_DIRECT.add(0x09); UTF7_DIRECT.add(0x0D); UTF7_DIRECT.add(0x0A); // tab, CR, LF
+
+        function modifiedBase64Encode(str, alphabet) {
+            // Encode UTF-16BE bytes using the given Base64 alphabet (no padding)
+            const buf = [];
+            for (let i = 0; i < str.length; i++) {
+                const code = str.charCodeAt(i);
+                buf.push(code >> 8, code & 0xFF);
+            }
+            const B = alphabet;
+            let result = '';
+            for (let i = 0; i < buf.length; i += 3) {
+                const b0 = buf[i], b1 = buf[i + 1] ?? 0, b2 = buf[i + 2] ?? 0;
+                const remaining = buf.length - i;
+                result += B[b0 >> 2];
+                result += B[((b0 & 3) << 4) | (b1 >> 4)];
+                if (remaining > 1) result += B[((b1 & 0xF) << 2) | (b2 >> 6)];
+                if (remaining > 2) result += B[b2 & 0x3F];
+            }
+            return result;
+        }
+
+        function modifiedBase64Decode(encoded, alphabet) {
+            const lookup = {};
+            for (let i = 0; i < alphabet.length; i++) lookup[alphabet[i]] = i;
+            const bytes = [];
+            for (let i = 0; i < encoded.length; i += 4) {
+                const c0 = lookup[encoded[i]] ?? 0;
+                const c1 = lookup[encoded[i + 1]] ?? 0;
+                const c2 = (i + 2 < encoded.length) ? lookup[encoded[i + 2]] ?? 0 : -1;
+                const c3 = (i + 3 < encoded.length) ? lookup[encoded[i + 3]] ?? 0 : -1;
+                bytes.push((c0 << 2) | (c1 >> 4));
+                if (c2 !== -1) bytes.push(((c1 & 0xF) << 4) | (c2 >> 2));
+                if (c3 !== -1) bytes.push(((c2 & 3) << 6) | c3);
+            }
+            // Decode UTF-16BE pairs, trim trailing zero if odd byte count
+            let result = '';
+            const len = bytes.length - (bytes.length % 2);
+            for (let i = 0; i < len; i += 2) {
+                result += String.fromCharCode((bytes[i] << 8) | bytes[i + 1]);
+            }
+            return result;
+        }
+
+        const B64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        const IMAP_B64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,';
+
+        function utf7Encode(text) {
+            let result = '', nonDirect = '';
+            for (let i = 0; i < text.length; i++) {
+                const code = text.charCodeAt(i);
+                if (UTF7_DIRECT.has(code)) {
+                    if (nonDirect) { result += '+' + modifiedBase64Encode(nonDirect, B64_ALPHABET) + '-'; nonDirect = ''; }
+                    result += text[i];
+                } else if (code === 0x2B) { // literal '+'
+                    if (nonDirect) { result += '+' + modifiedBase64Encode(nonDirect, B64_ALPHABET) + '-'; nonDirect = ''; }
+                    result += '+-';
+                } else {
+                    nonDirect += text[i];
+                }
+            }
+            if (nonDirect) result += '+' + modifiedBase64Encode(nonDirect, B64_ALPHABET) + '-';
+            return result;
+        }
+
+        function utf7Decode(text) {
+            let result = '', i = 0;
+            while (i < text.length) {
+                if (text[i] === '+') {
+                    if (text[i + 1] === '-') { result += '+'; i += 2; continue; }
+                    let end = text.indexOf('-', i + 1);
+                    if (end === -1) end = text.length;
+                    const encoded = text.substring(i + 1, end);
+                    result += modifiedBase64Decode(encoded, B64_ALPHABET);
+                    i = end + 1;
+                } else {
+                    result += text[i];
+                    i++;
+                }
+            }
+            return result;
+        }
+
+        function imapUtf7Encode(text) {
+            let result = '', nonAscii = '';
+            for (let i = 0; i < text.length; i++) {
+                const code = text.charCodeAt(i);
+                if (code >= 0x20 && code <= 0x7E) {
+                    if (nonAscii) { result += '&' + modifiedBase64Encode(nonAscii, IMAP_B64_ALPHABET) + '-'; nonAscii = ''; }
+                    if (text[i] === '&') { result += '&-'; }
+                    else { result += text[i]; }
+                } else {
+                    nonAscii += text[i];
+                }
+            }
+            if (nonAscii) result += '&' + modifiedBase64Encode(nonAscii, IMAP_B64_ALPHABET) + '-';
+            return result;
+        }
+
+        function imapUtf7Decode(text) {
+            let result = '', i = 0;
+            while (i < text.length) {
+                if (text[i] === '&') {
+                    if (text[i + 1] === '-') { result += '&'; i += 2; continue; }
+                    let end = text.indexOf('-', i + 1);
+                    if (end === -1) end = text.length;
+                    const encoded = text.substring(i + 1, end);
+                    result += modifiedBase64Decode(encoded, IMAP_B64_ALPHABET);
+                    i = end + 1;
+                } else {
+                    result += text[i];
+                    i++;
+                }
+            }
+            return result;
+        }
+
         function convertSingleLine(line) {
             const format = $('#encodingFormat').value;
             if (format === 'url') {
                 return textMode === 'encode' ? encodeURIComponent(line) : decodeURIComponent(line);
+            }
+            if (format === 'utf7') {
+                return textMode === 'encode' ? utf7Encode(line) : utf7Decode(line);
+            }
+            if (format === 'imap-utf7') {
+                return textMode === 'encode' ? imapUtf7Encode(line) : imapUtf7Decode(line);
             }
             if (textMode === 'encode') {
                 const bytes = new TextEncoder().encode(line);
@@ -3306,6 +3445,8 @@
             { name: 'Format: Base58', action: () => { $('#encodingFormat').value = 'base58'; } },
             { name: 'Format: Base62', action: () => { $('#encodingFormat').value = 'base62'; } },
             { name: 'Format: URL Encode', action: () => { $('#encodingFormat').value = 'url'; } },
+            { name: 'Format: UTF-7 (RFC 2152)', action: () => { $('#encodingFormat').value = 'utf7'; } },
+            { name: 'Format: IMAP UTF-7 (RFC 3501)', action: () => { $('#encodingFormat').value = 'imap-utf7'; } },
             { name: 'Toggle Compression', action: () => { const c = $('#compressFirst'); c.checked = !c.checked; } },
             { name: 'Toggle Line Wrap', action: () => { const c = $('#lineWrap'); c.checked = !c.checked; } },
             { name: 'Keyboard Shortcuts', action: () => showShortcutHelp(), key: '?' },
